@@ -10,6 +10,10 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 5. [APPUNTI SONAR (CCP) LEZIONE 4](#appunti-sonar-ccp-lezione-4)
 6. [APPUNTI ADC LEZIONE 6](#appunti-adc-lezione-6)
 7. [APPUNTI SUL PWM LEZIONE 7](#appunti-sul-pwm-lezione-7)
+8. [QUALI ISTRUZIONI AFFLIGGONO LO STATUS?](#quali-istruzioni-affliggono-lo-status)
+9. [COS’È LO STATUS?](#cos-lo-status)
+10. [SPIEGAZIONE ALCUNE ISTRUZIONI ASM (RIVEDERE GOTO E BRA CON PIC16 PIC18)](#spiegazione-alcune-istruzioni-asm-rivedere-goto-e-bra-con-pic16-pic18)
+11. [DIRETTIVE ASM](#direttive-asm)
 
 <!-- /TOC -->
 
@@ -71,7 +75,7 @@ Ovviamente la frequenza è minima se anche TMR0L è uguale a zero. Il tempo di i
 
 **4/32MHz = 1/8MHz che corrisponde a 125 ns. Questo è fisso, a meno di disabilitare il PLL**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente ma se volessi fare meglio hai 2 opzioni: la prima è salvare bene il valore del tempo di interrupt e/o sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler (Ho fatto il calcolo, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi)**. Come funziona la seconda soluzione? Il valore iniziale del TMR0L, ogni volta che c’è un overflow, si attiva un interrupt ed è lì che dovrei impostare il valore che voglio nel TMR0L. **Per Timer0 impostare registri T0CON e INTCON.**
 
-## APPUNTI LEZIONE 3 ( NOTA BENE PER ORALE )
+## APPUNTI LEZIONE 3 (**nota bene per orale**)
 Vediamo come mai posso rischiare di entrare due volte nella ISR dato un interrupt on change. Premo un bottone. Il valore logico di tensione che è fisicamente su PORTB hardware è 1 perché io sto premendo il bottone. Sulla XOR in alto l’uscita è 1. Quando l’uscita di quella XOR è 1, in automatico RBIF è automaticamente portato ad 1, il main si ferma ed entriamo in ISR. Ora che siamo nella ISR INTCON.RBIF==1? Sì perché la flag è partita con la pressione del bottone.
 
 Invece se resetti subito il flag ma non fai nessuna lettura della PORTB, lo XOR è ancora a 1, il PIC rialza il flag: questo perché la Q del flip flop non è cambiata, è ancora 0, ma noi su PORTB stiamo ancora premendo il pulsante quindi c’è un mismatch e l’uscita dello XOR è ancora 1. Ma quindi, dato che la flag è ancora alta, appena esco dal primo ISR rientro subito ed eseguo ISR una seconda volta, tutto questo mentre io sto ancora premendo il pulsante. Ancora una volta INTCON.RBIF==1, resetto la flag alla prima riga della ISR ma la seconda volta non è più vero che c’è il mismatch perché l’uscita del flip flop è stata aggiornata dalla ISR precedente (abbiamo fatto una read sulla PORTB tramite la condizione if (PORTB.RB6) appena dopo aver buttato giù la flag). L’uscita della XOR ora è a 0 e non rientrerò più nel ISR.
@@ -79,12 +83,12 @@ Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORT
 
 ## APPUNTI SONAR (CCP) LEZIONE 4
 Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da ricordare sono principalmente:  
-1.	Il sonar è collegato alla porta C. Se il sonar viene utilizzato in modalità Pulse Width Output, usare digital IN RC2 (anselc=0 trisc=1); sennò uso RC3 come Analog In e devo usare l’ADC.
+1.	Il sonar è collegato a **PORTC**. Se il sonar viene utilizzato in modalità **Pulse Width Output**, devo impostare **RC2 digital Input**  (ANSELC=0 TRISC=1); sennò uso **RC3** come **Analog Input** -> è necessario usare l’ADC.
 
-2.	Il sonar si appoggia al Timer TXCON per registrare i dati raccolti, che li sovrascrive nel registro del capture CCPXCON (16 bit), ovvero i registri CCPXH e CCPXL (8 bit), high e low rispettivamente. I timer dispari sono per il capture and compare mentre per il pwm si usano i timer pari. Si imposta il timer con il registro CCPTMRS0.
-3.	È una periferica, quindi per attivarne l’interrupt il sesto bit di INTCON deve essere ad uno, oltre al settimo bit GIE
-4.	L’attivazione degli interrupt non è solo legata al registro INTCON ma anche ai registri PIEX E PIRX. Cercare il numero corretto del registro a cui sostituire la X. Ci sono cinque registri per gli interrupt.
-5.	Se vuoi lo stream continuo dei dati LATC.RC6=1 va scritto sempre, inoltre deve essere output (stream continuo in uscita), quindi TRISC del bit 6 è sempre; Gli altri bit si possono mettere benissimo in modalità input, in particolare RC2 o RC3 (digiale/analogico)
+2.	Il sonar si appoggia al Timer **TXCON** change sovrascrive i dati nel registro del capture **CCPXCON** da 16 bit, suddiviso nei registri **CCPXH** e **CCPXL** (8 bit), high e low rispettivamente. I timer dispari vengono usati **Capture and Compare** mentre per i timer pari vengono usati per il **PWM**. Si imposta il timer con il registro **CCPTMRS0**.
+3.	È una periferica del uC, quindi per attivarne l’interrupt **INTCON.PEIE=1** (non dimenticare il general **INTCON.GIE=1**)
+4.	L’attivazione degli interrupt non è solo legata al registro **INTCON** ma anche ai registri **PIEX** e **PIRX**. Bisogna cercare il numero corretto del registro a cui sostituire la X. **Esistono cinque registri per gli interrupt**.
+5.	Se vuoi lo stream continuo dei dati imposta **LATC.RC6=1**, inoltre deve essere digital Output, quindi TRISC del bit 6 è sempre; Gli altri bit si possono mettere benissimo in modalità input, in particolare **RC2** o **RC3** (digial/analog)
 6.	Non dimenticare la routine di interrupt che è sempre identica:
 ```sh
 if(PIR1.CCP1IF){
@@ -101,20 +105,34 @@ PIR1.CCP1IF = 0;
 }
 ```
 
-Il sonar e il radar vengono utilizzati per misurare le distanze lanciando dei segnali e contando il tempo che impiegano a tornare.
-Utilizziamo il sonar nella modalità Pulse Width Output, ovvero genera un impulso proporzionale alla distanza misurata 1mm=1us di conversione.
-Analizziamo il sonar:
-- Pin 2 dove c’è l’uscita dell’impulso collegato in ampiezza RC2
-- Pin 4 serve a dire che il sensore effettua la misura ogni volta che trova il rising edge, che corrisponde all’RC6 dal punto di vista del micro. Se lo teniamo alto sempre fa lo stream continuo dei dati. 100mS per ogni misura (enorme tempo macchina per il nostro pic, tra una misura e l’altra il nostro PIC potrebbe fare una miriade di operazioni).
-1mm di risoluzione, minima distanza misurata 30 cm, ovvero 300 mm.
-Il nostro PIC ci offre a disposizione un modulo che, senza usare cicli macchina ci permette di far partire le misurazioni in automatico mentre noi svolgiamo le altre operazioni, ovvero il modulo CCP capture. Il modulo CCP vuol dire capture compare e pwm. Noi lo usiamo col sonar in modalità capture.
-Esistono 5 moduli CCP in totale collegati a tre pin, non tutti gli I/O possono essere usati per questa funzione. Il modulo capture si appoggia ad un timer(TMR1/3/5) e lo utilizza in modalità 16 bit. Quando dal pin esterno riceve un rising/falling edge, lui va a campionare il valore del timer su un registro che noi possiamo andare a leggere. All’arrivo dell’evento campiona e salva il valore del timer in un registro. Nel nostro caso abbiamo Timer 1 utilizzato in free running a fosc/4, ovvero la frequenza massima in questa modalità. Il contatore del timer non fa altro, ovviamente, che sommare al tempo più uno. NB: disabilita l’interrupt del timer. Bisogna utilizzare l’interrupt del CAPTURE. Ogni volta che cambio rising e falling (modalità per acquisire la distanza percorsa dal segnale), rischio che scatti un interrupt.
-Il timer 1 è un contatore da 16 bit, prima o poi andrà in overflow, se la misura viene presa prima e dopo essere andato in overflow? Come si fa? Analizziamo (esempio dell’orologio)
-La distanza tra le lancette è la stessa ma B fa overflow. Questo caso viene magicamente risolto dall’ALU: i designer del micro avevano previsto la possibilità di ovf. Quindi, sapendo che l’ALU fa le somme con il complemento a due (CPL2),  l’ ALU fa diventare il secondo operando negativo e poi somma i due operandi. Però così facendo ho bisogno di 17 bit. L’ALU conserva questo 17esimo bit in un posto chiamato bit di carry.
-Dobbiamo quindi impostare il timer 1 e poi abilitare gli interrupt.
+Il sonar viene utilizzato per misurare le distanze lanciando un segnale ad ultrasuoni e contando il tempo che impiega a tornare.
+
+Il sonar funziona con la modalità **Pulse Width Output** : genera un impulso proporzionale alla distanza misurata. Infatti 1mm equivale a 1us di "larghezza".  
+
+Analizziamo il sonar:  
+**Pin 2 --> RC2** dove c’è l’uscita dell’impulso collegato in ampiezza   
+**Pin 4 --> RC6** serve a dire che il sensore effettua la misura ogni volta che trova il rising edge (se alto allora la misura è continua)
+
+Passano 100mS tra ogni misura. Dal datasheet leggiamo 1mm di risoluzione, minima distanza misurata 300 mm.  
+
+Il nostro PIC ci offre a disposizione un modulo che, senza usare cicli macchina ci permette di far partire le misurazioni in automatico mentre noi svolgiamo le altre operazioni: **il modulo CCP** .  
+**CCP = Capture Compare PWM**.  
+**Esistono 5 moduli CCP in totale collegati a tre pin**, non tutti gli I/O possono essere usati per questa funzione.  
+**Il modulo capture si appoggia ad un timer (TMR1/3/5)** e lo utilizza in modalità 16 bit. Quando dal pin esterno riceve un rising/falling edge, lui va a campionare il valore del timer su un registro che noi possiamo andare a leggere. All’arrivo dell’evento campiona e salva il valore del timer in un registro.  
+
+Nel nostro caso abbiamo **TMR1** utilizzato in free running a **fosc/4**. Il contatore del timer non fa altro, ovviamente, che sommare al tempo più uno.  
+
+Bisogna utilizzare l’interrupt del CAPTURE. Ogni volta che cambio rising e falling (modalità per acquisire la distanza percorsa dal segnale), rischio che scatti un interrupt -> **NB: disabilita l’interrupt del TMR1**  
+
+TMR1 è un contatore da 16 bit, **prima o poi andrà in overflow** .  
+E se la seconda misura venisse presa dopo un overflow? Come si fa? Analizziamo (esempio dell’orologio):   
+
+Immaginiamo un orologio con due lancette A e B. A è prima di mezzo giorno, la seconda è dopo mezzogiorno. La distanza tra le lancette è la stessa ma B raffigura un overflow del timer perchè ha superato mezzo giorno.  
+**Questo caso viene magicamente risolto dall’ALU**: i designer del micro avevano previsto la possibilità di ovf. Quindi, sapendo che l’ALU fa le somme con il complemento a due (CPL2),  l’ ALU fa diventare il secondo operando negativo e poi somma i due operandi. Però così facendo ho bisogno di 17 bit. L’ALU conserva quest'ultimo nel bit di carry (vedi lo status).  
+
 Unità di misura del timer fosc/4, in tempo ogni colpo avviene ogni 125 ns (sapendo che fosc= 32MHz).
 dt= timer*125ns
-In un microsecondo ci stanno circa 8 volte 125 nanosecondi. Usiamo adeguatamente lo shift per ottenere la misura corretta
+In un microsecondo ci stanno circa 8 volte 125 nanosecondi. Usiamo adeguatamente lo shift per ottenere la misura corretta.
 
 ## APPUNTI ADC LEZIONE 6
 ADC. L’ADC funziona a 8/10 bit. I registri dell’ADC sono ADCON0, ADCON1,ADCON2.
@@ -139,3 +157,37 @@ Quindi, con l’uscita alta, TMRx riparte a contare. Ad un certo punto conta fin
 Come aumento la frequenza? Diminuisco PRx  la risoluzione diminuisce.
 La risoluzione del CCP viene dettata da PRx (se ho PR=5 ho solo 5 passi modificabili). Ho risoluzione massima con prescaler a 1 f=fosc/4. Di conseguenza ogni passo è 125ns con un osc di 32M. Avessimo un prescaler di 16 allora 125ns *16=2us.
 Definiamo il duty cycle=CCPL/PRx (in cui PRx è un registro a 8 bit)
+
+# PARTE SU ASSEMBLY  
+## QUALI ISTRUZIONI AFFLIGGONO LO STATUS?
+- Tutte le operazioni di addizione (ADDWF ADDLW), sottrazione (SUBWF SUBLW) affliggono i bit C (carry) DC (digit carry) Z (Zero bit)
+- Le rotate left e rotate right (RLF RRF) affliggono il bit C (carry) perché ho bisogno di 1 bit da salvare da qualche parte mentre sto shiftando
+
+- Tutte le operazioni di incremento e decremento non condizionali affliggono il bit Z
+- Le operazioni logiche ANDWF CLEARF CLEARW COMF IORWF MOVF XORWF ANDLW IORLW  XORLW affliggono il bit Z
+- Tutte le operazioni rimanenti non affliggono lo status (esempio lo swap dei nibbles)
+
+## COS’È LO STATUS?
+Lo STATUS è uno dei registri più importanti del microcontrollore. Esso contiene dei bit legati alle operazioni effettuate dall’ALU, il bit dello stato di RESET e i bit del controllo del paging dei banchi di memoria.
+
+
+
+## SPIEGAZIONE ALCUNE ISTRUZIONI ASM (RIVEDERE GOTO E BRA CON PIC16 PIC18)
+GOTO XXX: aggiorna il PC ad un’etichetta designata. La dimensione dell’indirizzo dell’etichetta è di 11 bit È sensibile al paging, infatti il bit 12 e 13 vengono acchiappati da PCLATH. Quindi usare BANKSEL. Nei PIC18 il PC è a 21 bit assoluti, il goto è a 20bit quindi può spostarti ovunque in 2M di memoria (in due cicli), ma c’è il problema del paging con PCLATU (non più H)
+BRA XXX: è un salto (un po’ come il goto) relativo all’istruzione di partenza. Posso spostarmi di massimo +-1023 posizioni dall’indirizzo di partenza. Essendo un salto condizionale partendo dal valore del PC corrente, non è affetto dal paging (non è disponibile nei PIC16).
+RETFIE: specifica il return dall’interrupt (quindi sposta quello che c’era nel Top Of Stack nel PC) e riattiva il general interrupt GIE (che è stato disattivato all’ingresso della routine dell’interrupt).
+CALL: va all’etichetta, esattamente come il goto, quindi è affetto da paging (USARE BANKSEL). Si salva nello stack il PC corrispondente alla posizione di chiamata. Appena la routine chiamata dal CALL, il PC viene rishiftato al chiamante.
+
+
+## DIRETTIVE ASM
+#include: tale e quale a C++. Si usa con #include <p18f452.inc>
+UDATA: dichiara l’inizio di una sezione di dati non inizializzati. Per riservare lo spazio in questa sezione bisogna utilizzare la direttiva RES. L’utilizzo è “LABEL res #byte”.Se non vengono specificate label e indirizzo, (es VARIABLES_IN_BANK udata 0x20) si scrive .udata e il linker fa tutto da sé.
+BANKSEL XXX: Serve per selezionare automaticamente il bank in base all’etichetta desiderata. Quindi se voglio selezionare un TRISB e non so dove sono, scrivo BANKSEL TRISB. Questo mi permette di poter mettere (con le dovute precauzioni della scelta del micro) lo stesso codice su un altro micro senza preoccuparmi del Bank da selezionare.
+CODE XXXX : (indirizzo opzionale) significa che il linker può piazzare il codice nella program memory all’indirizzo specifico XXXX segnalato dall’utente, oppure viene lasciata libera la scelta dell’indirizzo al linker se XXXX non viene specificato.
+END: specifica all’assembler che questa è la fine del file asm. Ogni file asm deve necessariamente finire con la direttiva END. Se così non fosse, l’assembler continuerebbe a passare tutta la memoria.
+equ: analogo del define del c++. Si scrive come “PORTCACCA equ PORTD” (etichetta eq nome_indirizzo_in_RAM).
+DIFFERENZE TRA PSEUDO-ISTRUZIONI, MACRO, DIRETTIVE
+Direttiva: una direttiva assembler è un comando utilizzato a livello software che compare nel source code ma non è direttamente traducibile come opcode. Di conseguenza una direttiva non compare nell’instruction set del datasheet del PIC ma nella User’s guide del MPASM™ Assembler.
+Pseudo-istruzione: istruzione ASM scritta con parole diverse in modo tale da agevolare la memorizzazione. Per esempio, nel PIC16 , c’è MOVWF, mentre la sua “complementare” dovrebbe essere MOVFW. Nelle istruzioni del datasheet però esiste solo MOVF, w.
+L’assemblatore via software permette di tradurre direttamente MOVF,w tramite la pseudo-istruzione MOVFW, in modo tale da avere meno confusione nel codice e migliore memorizzazione.
+Macro: può essere considerata come “un’istruzione” a livello di sviluppo software, ma in realtà è una routine di istruzioni unificate sotto un unico nome. A differenza delle funzioni in linguaggio C, la macro è una sostituzione in-line. Questo significa che non viene effettuata una call, non viene cambiato il PC, non viene allocato spazio nello stack. Il contenuto della macro viene semplicemente inserito in quel punto del programma. Per l’utilizzo leggi la User’s guide del MPASM™ Assembler.
