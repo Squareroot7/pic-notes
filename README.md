@@ -1,3 +1,5 @@
+# pic-notes
+Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:1 -->
 
