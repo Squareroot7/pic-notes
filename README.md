@@ -75,12 +75,31 @@ Ovviamente la frequenza è minima se anche TMR0L è uguale a zero. Il tempo di i
 
 **4/32MHz = 1/8MHz che corrisponde a 125 ns. Questo è fisso, a meno di disabilitare il PLL**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente ma se volessi fare meglio hai 2 opzioni: la prima è salvare bene il valore del tempo di interrupt e/o sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler (Ho fatto il calcolo, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi)**. Come funziona la seconda soluzione? Il valore iniziale del TMR0L, ogni volta che c’è un overflow, si attiva un interrupt ed è lì che dovrei impostare il valore che voglio nel TMR0L. **Per Timer0 impostare registri T0CON e INTCON.**
 
-## APPUNTI LEZIONE 3 (**nota bene per orale**)
-Vediamo come mai posso rischiare di entrare due volte nella ISR dato un interrupt on change. Premo un bottone. Il valore logico di tensione che è fisicamente su PORTB hardware è 1 perché io sto premendo il bottone. Sulla XOR in alto l’uscita è 1. Quando l’uscita di quella XOR è 1, in automatico RBIF è automaticamente portato ad 1, il main si ferma ed entriamo in ISR. Ora che siamo nella ISR INTCON.RBIF==1? Sì perché la flag è partita con la pressione del bottone.
+## APPUNTI LEZIONE 3 ( NOTA BENE PER ORALE )
+Vediamo come mai posso **rischiare di entrare due volte nella ISR dato un interrupt on change** .    
+Premo un bottone. Il valore logico di tensione che è fisicamente su PORTB hardware è 1 perché io sto premendo il bottone -> **XOR=1** -> scatta l'interrupT -> **RBIF=1**, il main si ferma ed entriamo in ISR.  
+Ora che siamo nella ISR **INTCON.RBIF==1** ? Sì, la flag è partita alla pressione del bottone.
 
-Invece se resetti subito il flag ma non fai nessuna lettura della PORTB, lo XOR è ancora a 1, il PIC rialza il flag: questo perché la Q del flip flop non è cambiata, è ancora 0, ma noi su PORTB stiamo ancora premendo il pulsante quindi c’è un mismatch e l’uscita dello XOR è ancora 1. Ma quindi, dato che la flag è ancora alta, appena esco dal primo ISR rientro subito ed eseguo ISR una seconda volta, tutto questo mentre io sto ancora premendo il pulsante. Ancora una volta INTCON.RBIF==1, resetto la flag alla prima riga della ISR ma la seconda volta non è più vero che c’è il mismatch perché l’uscita del flip flop è stata aggiornata dalla ISR precedente (abbiamo fatto una read sulla PORTB tramite la condizione if (PORTB.RB6) appena dopo aver buttato giù la flag). L’uscita della XOR ora è a 0 e non rientrerò più nel ISR.
+Se ora resetto subito la flag ma non faccio nessuna lettura della **PORTB**, la **XOR** è ancora a 1, il PIC rialza la flag: questo perché la Q del flip flop non è stata cambiata (non ho letto niente ancora), è ancora 0, ma su **PORTB** il pulsante è ancora premuto quindi c’è un mismatch e l’uscita dello XOR è ancora 1. Ma quindi, dato che la flag è ancora alta, appena esco dal primo ISR rientro subito ed eseguo ISR una seconda volta, tutto questo mentre io sto ancora premendo il pulsante. Ancora una volta INTCON.RBIF==1, resetto la flag alla prima riga della ISR ma la seconda volta non è più vero che c’è il mismatch perché l’uscita del flip flop è stata aggiornata dalla ISR precedente (abbiamo fatto una read sulla PORTB tramite la condizione if (PORTB.RB6) appena dopo aver buttato giù la flag). L’uscita della XOR ora è a 0 e non rientrerò più nel ISR.
 Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORTB mi frego e rientro due volte nella stessa ISR ad ogni pressione del pulsante dell’interrupt on change.
 
+```sh
+void interrupt(){ // ISR SCORRETTO
+if(INTCON.REIF){ //flag alzata da PORTB
+INTCON.RBIF=0; //Reset della flag
+// a questo punto accade il mismatch
+// non ho aggiornato PORTB prima di buttare giù la flag
+if(PORTB.RB6)} i++; // leggo PORTB quindi alla isr dopo
+if(PORTB.RB) i--; // avrò aggiornato il flip flop
+
+void interrupt(){ // ISR CORRETTO
+if(INTCON.REIF){ // flag alzata da PORTB
+if(PORTB.RB6)} i++; // leggo PORTB ->Flip Flop aggiornato!
+if(PORTB.RB) i--; // altro refresh di PORTB
+INTCON.RBIF=0; //Reset della flag
+// a questo punto ho PORTB refreshato -> NO mismatch
+// non entro nella ISR una seconda volta  
+```
 ## APPUNTI SONAR (CCP) LEZIONE 4
 Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da ricordare sono principalmente:  
 1.	Il sonar è collegato a **PORTC**. Se il sonar viene utilizzato in modalità **Pulse Width Output**, devo impostare **RC2 digital Input**  (ANSELC=0 TRISC=1); sennò uso **RC3** come **Analog Input** -> è necessario usare l’ADC.
@@ -103,7 +122,7 @@ CCP1CON.CCP1M0 = 1;            // Set Sense to Rising
 		}
 PIR1.CCP1IF = 0;
 }
-```
+```  
 
 Il sonar viene utilizzato per misurare le distanze lanciando un segnale ad ultrasuoni e contando il tempo che impiega a tornare.
 
