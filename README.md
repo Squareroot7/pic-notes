@@ -184,15 +184,39 @@ Seleziona il prescaler di fosc per il modulo ADC e, come conseguenza setta la du
 **NB:** il **ADC_GO_NOT_DONE** non deve essere messo nella stessa istruzione in cui viene acceso l’ADC.
 
 ## APPUNTI SUL PWM LEZIONE 7
-PWM. Il PWM è un modulo che permette di generare un’onda quadra con duty cycle variabile. Viene spesso usato per alimentare a diverse potenze un carico.
-Il pwm ha due comparatori HIGH/LOW. il comparatore sotto setta alto l’output, mentre quello sopra low. Un problema costruttivo di questa scheda è legato al fatto che abbiamo un PIC che lavora ad 8 bit ma abbiamo un pwm che formalmente lavora a 10. Come è possibile? Sono riusciti ad ottenere 1024 valori di quantizzazione possibile in questa maniera: Se il registro CCPRxH è da 8 bit, i due bit mancanti per renderlo da dieci bit vengono presi dai bit meno significativi di un altro registro e vengono affiancati nella parte meno significativa del nostro registro. Parliamo della implicazione di frequenza e come fanno i comparatori a comparare un valore a 10 bit: Anche al 	2, che di solito funziona ad 8 bit, sono stati aggiunti due bit per fare la comparazione con il valore nel registro CCPRxH. Ovviamente i bit aggiuntivi vanno ad una frequenza 4 volte superiore rispetto a quella a cui funzionava il timer. Se invece li avessimo messi nei bit più significativi, clockati a 256 volte superiore se bit MSB e frequenza più bassa di 4 volte. La max frequenza è fosc/4, per questo motivo per coordinare i due bit del timer c’è un contatore dedicato che lavora ad fosc. Inoltre per questo motivo, legato al coordinamento in frequenza dei bit LSB del TIMER2, il prescaler è disponibile solo ad 1, 4 o 16. CCPRxL è l’unico registro. Solo sul Ton o Tup bisogna utilizzare questa manovra. Tup è CCPRxL, concatenazione AND con due bit del CCPxCON in questa posizione 4,5 che da 8 è diventato 10 bit (?). Il risultato è che il nostro “timer” è come se andasse a fosc grazie ai due bit aggiuntivi.
+Il **PWM** è un modulo che permette di generare un’onda quadra con duty cycle variabile. Viene spesso usato per alimentare a diverse potenze un carico.
+**Il PWM ha due comparatori HIGH/LOW** .  
+Il comparatore sotto setta l’output, mentre il comparatore sopra lo resetta.
 
-Facciamo un esempio: 	 PRx=5			CCPRxL=2
-Supponiamo che TMRx=0 e siamo in uscita con HIGH. Il timer conta e arriva a 5 (valore di PR). Il comparatore sotto scatta, latcha l’uscita a 5, fa copiare CCPRxL in CCPRxH, resetta TMRx.
-Quindi, con l’uscita alta, TMRx riparte a contare. Ad un certo punto conta fino a 2 che è il valore di CCPRxH. L’uscita viene quindi latchata verso il basso grazie al flip flop. TMRx continua quindi a contare fino a che non raggiunge 5, istante in cui l’onda viene riportata alta e quindi si ripete il ciclo appena descritto. Il tempo totale del ciclo è PRx+1 perché l’onda ci mette un colpo di clock a tornare alta.
-Come aumento la frequenza? Diminuisco PRx  la risoluzione diminuisce.
-La risoluzione del CCP viene dettata da PRx (se ho PR=5 ho solo 5 passi modificabili). Ho risoluzione massima con prescaler a 1 f=fosc/4. Di conseguenza ogni passo è 125ns con un osc di 32M. Avessimo un prescaler di 16 allora 125ns *16=2us.
-Definiamo il duty cycle=CCPL/PRx (in cui PRx è un registro a 8 bit)
+Un problema costruttivo di questa scheda è legato al fatto che **abbiamo un PIC che lavora ad 8 bit ma abbiamo un pwm che formalmente lavora a 10** . Come è possibile?  
+Sono riusciti ad ottenere 1024 valori di quantizzazione possibile in questa maniera: Se il registro **CCPRxH**  è da **8 bit, i due bit mancanti per renderlo da dieci bit vengono presi dai bit meno significativi di un altro registro e vengono affiancati nella parte meno significativa del nostro registro** .  
+Parliamo della implicazione di frequenza e come fanno i comparatori a comparare un valore a 10 bit: Anche al 	2, che di solito funziona ad 8 bit, sono stati aggiunti due bit per fare la comparazione con il valore nel registro **CCPRxH** .  
+Ovviamente **i bit aggiuntivi vanno ad una frequenza 4 volte superiore rispetto a quella a cui funzionava il timer** (se invece li avessimo messi nei bit più significativi, clockati a 256 volte superiore se bit MSB e frequenza più bassa di 4 volte).  
+
+**La max frequenza è fosc/4** , per questo motivo per coordinare i due bit del timer **c’è un contatore dedicato che lavora ad fosc** .  
+Inoltre per questo motivo, legato al coordinamento in frequenza dei bit LSB del TIMER2, **il prescaler è disponibile solo ad 1, 4 o 16** .  
+**CCPRxL** è l’unico registro. **Tup (parte alta del duty cycle) è segnato da CCPRxL** che consiste in un AND con i due bit del CCPxCON. Il risultato è che il nostro “timer” è come se fosse 10 bit e andasse a fosc grazie ai due bit aggiuntivi.
+
+Facciamo un esempio settando 	 **PRx=5			CCPRxL=2**  :  
+supponiamo **TMRx=0** e l'uscita è HIGH. Il timer conta e arriva a 5 (valore di PR).
+1. **Il comparatore sotto scatta**
+2. **latcha l’uscita alta** quando raggiunge 5
+3. copia **CCPRxL** in **CCPRxH**
+4. resetta **TMRx**.  
+
+Quindi, con l’uscita alta, TMRx riparte a contare. Ad un certo punto conta fino a 2 che è il valore di **CCPRxH**.
+1. **latcha l'uscita bassa** grazie al flip flop
+2. **TMRx continua a contare** fino a che non raggiunge 5
+3. **l’onda viene riportata alta** e quindi si ripete il ciclo appena descritto.
+
+**Il tempo totale del ciclo è PRx+1** perché l’onda ci mette un colpo di clock a tornare alta.
+
+**Come aumento la frequenza** Diminuisco PRx -> **la risoluzione diminuisce** .  
+La risoluzione del **CCP** viene dettata da PRx (Nota: se ho PR=5 ho solo 5 passi modificabili). Ho risoluzione massima con prescaler a 1 f=fosc/4. Di conseguenza ogni passo è 125ns con un osc di 32M. Avessimo un prescaler di 16 allora:  
+<code>125ns * 16 = 2us</code>  
+
+Vado ora a definire il duty cycle  
+<code>duty cycle=CCPL/PRx </code> (in cui PRx è un registro a 8 bit)
 
 # PARTE SU ASSEMBLY  
 ## QUALI ISTRUZIONI AFFLIGGONO LO STATUS?
