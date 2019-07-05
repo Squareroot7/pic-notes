@@ -7,6 +7,9 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 2. [APPUNTI TIMER0 LEZIONE 2](#appunti-timer0-lezione-2)
 3. [APPUNTI LCD LEZIONE 2](#appunti-lcd-lezione-2)
 4. [APPUNTI LEZIONE 3 ( NOTA BENE PER ORALE )](#appunti-lezione-3-nota-bene-per-orale-)
+5. [APPUNTI SONAR (CCP) LEZIONE 4](#appunti-sonar-ccp-lezione-4)
+6. [APPUNTI ADC LEZIONE 6](#appunti-adc-lezione-6)
+7. [APPUNTI SUL PWM LEZIONE 7](#appunti-sul-pwm-lezione-7)
 
 <!-- /TOC -->
 
@@ -74,7 +77,7 @@ Vediamo come mai posso rischiare di entrare due volte nella ISR dato un interrup
 Invece se resetti subito il flag ma non fai nessuna lettura della PORTB, lo XOR è ancora a 1, il PIC rialza il flag: questo perché la Q del flip flop non è cambiata, è ancora 0, ma noi su PORTB stiamo ancora premendo il pulsante quindi c’è un mismatch e l’uscita dello XOR è ancora 1. Ma quindi, dato che la flag è ancora alta, appena esco dal primo ISR rientro subito ed eseguo ISR una seconda volta, tutto questo mentre io sto ancora premendo il pulsante. Ancora una volta INTCON.RBIF==1, resetto la flag alla prima riga della ISR ma la seconda volta non è più vero che c’è il mismatch perché l’uscita del flip flop è stata aggiornata dalla ISR precedente (abbiamo fatto una read sulla PORTB tramite la condizione if (PORTB.RB6) appena dopo aver buttato giù la flag). L’uscita della XOR ora è a 0 e non rientrerò più nel ISR.
 Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORTB mi frego e rientro due volte nella stessa ISR ad ogni pressione del pulsante dell’interrupt on change.
 
-**APPUNTI SONAR (CCP) LEZIONE 4**
+## APPUNTI SONAR (CCP) LEZIONE 4
 Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da ricordare sono principalmente:  
 1.	Il sonar è collegato alla porta C. Se il sonar viene utilizzato in modalità Pulse Width Output, usare digital IN RC2 (anselc=0 trisc=1); sennò uso RC3 come Analog In e devo usare l’ADC.
 
@@ -98,7 +101,7 @@ PIR1.CCP1IF = 0;
 }
 ```
 
-Il sonar e il radar vengono utilizzati per misurare le distanze lanciando dei segnali e contando il tempo che impiegano a tornare. 
+Il sonar e il radar vengono utilizzati per misurare le distanze lanciando dei segnali e contando il tempo che impiegano a tornare.
 Utilizziamo il sonar nella modalità Pulse Width Output, ovvero genera un impulso proporzionale alla distanza misurata 1mm=1us di conversione.
 Analizziamo il sonar:
 - Pin 2 dove c’è l’uscita dell’impulso collegato in ampiezza RC2
@@ -112,3 +115,27 @@ Dobbiamo quindi impostare il timer 1 e poi abilitare gli interrupt.
 Unità di misura del timer fosc/4, in tempo ogni colpo avviene ogni 125 ns (sapendo che fosc= 32MHz).
 dt= timer*125ns
 In un microsecondo ci stanno circa 8 volte 125 nanosecondi. Usiamo adeguatamente lo shift per ottenere la misura corretta
+
+## APPUNTI ADC LEZIONE 6
+ADC. L’ADC funziona a 8/10 bit. I registri dell’ADC sono ADCON0, ADCON1,ADCON2.
+ADCON0 serve a determinare con i pin da 6-2 il pin scelto per il trasferimento da analogico a digitale. In particolare se pensi di lavorare col sonar a p.22 del datasheet si vede la conversione RC3/AN15 che corrisponde ad 01111. Il pin ADC_GO_NOT_DONE è il bit 1 e quando è alto incomincia la conversione, quando la conversione è completata torna a zero. Il bit 0 di questo registro invece è legato alla abilitazione dell’ADC e deve essere 1.
+ADCON1 è invece il registro delle alimentazioni. Noi di solito lo alimentiamo 0/+5V e quindi lo poniamo semplicemente tutto a 0.
+ADCON2 invece contiene il bit 7 che è legato alla giustificazione, ovvero, dove vengono salvati i bit più significativi e dove i meno significativi. Considera che abbiamo due registri ADRESH e ADRESL e che il massimo dei bit da salvare sarà 10. Se usiamo ADC ad 8 bit allora se giustificato a destra o a sinistra non è importante, basta copiare dal registro corretto il dato. Se invece a 10 bit, 2 bit saranno o nell’High o nel registro Low e come vanno salvati dipende dalla giustificazione. I bit da 5 a 3 permettono di settare il tempo d’acquisizione (tempo di delay dopo che il condensatore del S&H viene bloccato). Nel caso venga settato a 0  appena viene settato il GO dell’ADC parte subito la conversione, la cui lunghezza verrà data da Tad. Attenzione che se l’acquisition time è zero e Tad troppo corto, la conversione non andrà a buon fine. Quindi è sconsigliatissimo tenere l’acquisition time a zero. Di solito si piazza ad un valore che superi almeno 7us quindi se ho un Tad di 1us posso settare l’acquisition time a 16Tad, sul datasheet dice che servono almeno 11Tad per avere una conversione riuscita
+Seleziona il prescaler di fosc per il modulo ADC e, come conseguenza setta la durata di 1 Tad (si può usare anche un clock di un oscillatore dedicato FRC che va a 600Khz
+Nota: Tacqt è il tempo in cui il S&H è ancora agganciato al pin del PIC e quindi il condensatore  è ancora libero di caricarsi prima che intervenga Tad per iniziare l’acquisizione del valore.
+registri.
+RICORDA DI CONFIGURARE BENE I PORT con ansel=1 e tris=1
+Nota: potrei anche tenere il buffer input digitale acceso con ANSEL=0 però consumerebbe potenza a caso, la conversione avviene correttamente a priori)
+Nota: ADIF è settato alla fine di ogni conversione a prescindere dall’interrupt abilitato o no
+Nota: il GO/DONE non deve essere messo nella stessa istruzione in cui viene acceso l’ADC
+
+## APPUNTI SUL PWM LEZIONE 7
+PWM. Il PWM è un modulo che permette di generare un’onda quadra con duty cycle variabile. Viene spesso usato per alimentare a diverse potenze un carico.
+Il pwm ha due comparatori HIGH/LOW. il comparatore sotto setta alto l’output, mentre quello sopra low. Un problema costruttivo di questa scheda è legato al fatto che abbiamo un PIC che lavora ad 8 bit ma abbiamo un pwm che formalmente lavora a 10. Come è possibile? Sono riusciti ad ottenere 1024 valori di quantizzazione possibile in questa maniera: Se il registro CCPRxH è da 8 bit, i due bit mancanti per renderlo da dieci bit vengono presi dai bit meno significativi di un altro registro e vengono affiancati nella parte meno significativa del nostro registro. Parliamo della implicazione di frequenza e come fanno i comparatori a comparare un valore a 10 bit: Anche al 	2, che di solito funziona ad 8 bit, sono stati aggiunti due bit per fare la comparazione con il valore nel registro CCPRxH. Ovviamente i bit aggiuntivi vanno ad una frequenza 4 volte superiore rispetto a quella a cui funzionava il timer. Se invece li avessimo messi nei bit più significativi, clockati a 256 volte superiore se bit MSB e frequenza più bassa di 4 volte. La max frequenza è fosc/4, per questo motivo per coordinare i due bit del timer c’è un contatore dedicato che lavora ad fosc. Inoltre per questo motivo, legato al coordinamento in frequenza dei bit LSB del TIMER2, il prescaler è disponibile solo ad 1, 4 o 16. CCPRxL è l’unico registro. Solo sul Ton o Tup bisogna utilizzare questa manovra. Tup è CCPRxL, concatenazione AND con due bit del CCPxCON in questa posizione 4,5 che da 8 è diventato 10 bit (?). Il risultato è che il nostro “timer” è come se andasse a fosc grazie ai due bit aggiuntivi.
+
+Facciamo un esempio: 	 PRx=5			CCPRxL=2
+Supponiamo che TMRx=0 e siamo in uscita con HIGH. Il timer conta e arriva a 5 (valore di PR). Il comparatore sotto scatta, latcha l’uscita a 5, fa copiare CCPRxL in CCPRxH, resetta TMRx.
+Quindi, con l’uscita alta, TMRx riparte a contare. Ad un certo punto conta fino a 2 che è il valore di CCPRxH. L’uscita viene quindi latchata verso il basso grazie al flip flop. TMRx continua quindi a contare fino a che non raggiunge 5, istante in cui l’onda viene riportata alta e quindi si ripete il ciclo appena descritto. Il tempo totale del ciclo è PRx+1 perché l’onda ci mette un colpo di clock a tornare alta.
+Come aumento la frequenza? Diminuisco PRx  la risoluzione diminuisce.
+La risoluzione del CCP viene dettata da PRx (se ho PR=5 ho solo 5 passi modificabili). Ho risoluzione massima con prescaler a 1 f=fosc/4. Di conseguenza ogni passo è 125ns con un osc di 32M. Avessimo un prescaler di 16 allora 125ns *16=2us.
+Definiamo il duty cycle=CCPL/PRx (in cui PRx è un registro a 8 bit)
