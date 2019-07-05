@@ -83,12 +83,12 @@ Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORT
 
 ## APPUNTI SONAR (CCP) LEZIONE 4
 Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da ricordare sono principalmente:  
-1.	Il sonar è collegato alla porta C. Se il sonar viene utilizzato in modalità Pulse Width Output, usare digital IN RC2 (anselc=0 trisc=1); sennò uso RC3 come Analog In e devo usare l’ADC.
+1.	Il sonar è collegato a **PORTC**. Se il sonar viene utilizzato in modalità **Pulse Width Output**, devo impostare **RC2 digital Input**  (ANSELC=0 TRISC=1); sennò uso **RC3** come **Analog Input** -> è necessario usare l’ADC.
 
-2.	Il sonar si appoggia al Timer TXCON per registrare i dati raccolti, che li sovrascrive nel registro del capture CCPXCON (16 bit), ovvero i registri CCPXH e CCPXL (8 bit), high e low rispettivamente. I timer dispari sono per il capture and compare mentre per il pwm si usano i timer pari. Si imposta il timer con il registro CCPTMRS0.
-3.	È una periferica, quindi per attivarne l’interrupt il sesto bit di INTCON deve essere ad uno, oltre al settimo bit GIE
-4.	L’attivazione degli interrupt non è solo legata al registro INTCON ma anche ai registri PIEX E PIRX. Cercare il numero corretto del registro a cui sostituire la X. Ci sono cinque registri per gli interrupt.
-5.	Se vuoi lo stream continuo dei dati LATC.RC6=1 va scritto sempre, inoltre deve essere output (stream continuo in uscita), quindi TRISC del bit 6 è sempre; Gli altri bit si possono mettere benissimo in modalità input, in particolare RC2 o RC3 (digiale/analogico)
+2.	Il sonar si appoggia al Timer **TXCON** change sovrascrive i dati nel registro del capture **CCPXCON** da 16 bit, suddiviso nei registri **CCPXH** e **CCPXL** (8 bit), high e low rispettivamente. I timer dispari vengono usati **Capture and Compare** mentre per i timer pari vengono usati per il **PWM**. Si imposta il timer con il registro **CCPTMRS0**.
+3.	È una periferica del uC, quindi per attivarne l’interrupt **INTCON.PEIE=1** (non dimenticare il general **INTCON.GIE=1**)
+4.	L’attivazione degli interrupt non è solo legata al registro **INTCON** ma anche ai registri **PIEX** e **PIRX**. Bisogna cercare il numero corretto del registro a cui sostituire la X. **Esistono cinque registri per gli interrupt**.
+5.	Se vuoi lo stream continuo dei dati imposta **LATC.RC6=1**, inoltre deve essere digital Output, quindi TRISC del bit 6 è sempre; Gli altri bit si possono mettere benissimo in modalità input, in particolare **RC2** o **RC3** (digial/analog)
 6.	Non dimenticare la routine di interrupt che è sempre identica:
 ```sh
 if(PIR1.CCP1IF){
@@ -105,21 +105,34 @@ PIR1.CCP1IF = 0;
 }
 ```
 
-Il sonar e il radar vengono utilizzati per misurare le distanze lanciando dei segnali e contando il tempo che impiegano a tornare.
-Utilizziamo il sonar nella modalità Pulse Width Output, ovvero genera un impulso proporzionale alla distanza misurata 1mm=1us di conversione.
-Analizziamo il sonar:
-- Pin 2 dove c’è l’uscita dell’impulso collegato in ampiezza RC2
-- Pin 4 serve a dire che il sensore effettua la misura ogni volta che trova il rising edge, che corrisponde all’RC6 dal punto di vista del micro. Se lo teniamo alto sempre fa lo stream continuo dei dati. 100mS per ogni misura (enorme tempo macchina per il nostro pic, tra una misura e l’altra il nostro PIC potrebbe fare una miriade di operazioni).
+Il sonar viene utilizzato per misurare le distanze lanciando un segnale ad ultrasuoni e contando il tempo che impiega a tornare.
 
-1mm di risoluzione, minima distanza misurata 30 cm, ovvero 300 mm.
-Il nostro PIC ci offre a disposizione un modulo che, senza usare cicli macchina ci permette di far partire le misurazioni in automatico mentre noi svolgiamo le altre operazioni, ovvero il modulo CCP capture. Il modulo CCP vuol dire capture compare e pwm. Noi lo usiamo col sonar in modalità capture.
-Esistono 5 moduli CCP in totale collegati a tre pin, non tutti gli I/O possono essere usati per questa funzione. Il modulo capture si appoggia ad un timer(TMR1/3/5) e lo utilizza in modalità 16 bit. Quando dal pin esterno riceve un rising/falling edge, lui va a campionare il valore del timer su un registro che noi possiamo andare a leggere. All’arrivo dell’evento campiona e salva il valore del timer in un registro. Nel nostro caso abbiamo Timer 1 utilizzato in free running a fosc/4, ovvero la frequenza massima in questa modalità. Il contatore del timer non fa altro, ovviamente, che sommare al tempo più uno. NB: disabilita l’interrupt del timer. Bisogna utilizzare l’interrupt del CAPTURE. Ogni volta che cambio rising e falling (modalità per acquisire la distanza percorsa dal segnale), rischio che scatti un interrupt.
-Il timer 1 è un contatore da 16 bit, prima o poi andrà in overflow, se la misura viene presa prima e dopo essere andato in overflow? Come si fa? Analizziamo (esempio dell’orologio)
-La distanza tra le lancette è la stessa ma B fa overflow. Questo caso viene magicamente risolto dall’ALU: i designer del micro avevano previsto la possibilità di ovf. Quindi, sapendo che l’ALU fa le somme con il complemento a due (CPL2),  l’ ALU fa diventare il secondo operando negativo e poi somma i due operandi. Però così facendo ho bisogno di 17 bit. L’ALU conserva questo 17esimo bit in un posto chiamato bit di carry.
-Dobbiamo quindi impostare il timer 1 e poi abilitare gli interrupt.
+Il sonar funziona con la modalità **Pulse Width Output** : genera un impulso proporzionale alla distanza misurata. Infatti 1mm equivale a 1us di "larghezza".  
+
+Analizziamo il sonar:  
+**Pin 2 --> RC2** dove c’è l’uscita dell’impulso collegato in ampiezza   
+**Pin 4 --> RC6** serve a dire che il sensore effettua la misura ogni volta che trova il rising edge (se alto allora la misura è continua)
+
+Passano 100mS tra ogni misura. Dal datasheet leggiamo 1mm di risoluzione, minima distanza misurata 300 mm.  
+
+Il nostro PIC ci offre a disposizione un modulo che, senza usare cicli macchina ci permette di far partire le misurazioni in automatico mentre noi svolgiamo le altre operazioni: **il modulo CCP** .  
+**CCP = Capture Compare PWM**.  
+**Esistono 5 moduli CCP in totale collegati a tre pin**, non tutti gli I/O possono essere usati per questa funzione.  
+**Il modulo capture si appoggia ad un timer (TMR1/3/5)** e lo utilizza in modalità 16 bit. Quando dal pin esterno riceve un rising/falling edge, lui va a campionare il valore del timer su un registro che noi possiamo andare a leggere. All’arrivo dell’evento campiona e salva il valore del timer in un registro.  
+
+Nel nostro caso abbiamo **TMR1** utilizzato in free running a **fosc/4**. Il contatore del timer non fa altro, ovviamente, che sommare al tempo più uno.  
+
+Bisogna utilizzare l’interrupt del CAPTURE. Ogni volta che cambio rising e falling (modalità per acquisire la distanza percorsa dal segnale), rischio che scatti un interrupt -> **NB: disabilita l’interrupt del TMR1**  
+
+TMR1 è un contatore da 16 bit, **prima o poi andrà in overflow** .  
+E se la seconda misura venisse presa dopo un overflow? Come si fa? Analizziamo (esempio dell’orologio):   
+
+Immaginiamo un orologio con due lancette A e B. A è prima di mezzo giorno, la seconda è dopo mezzogiorno. La distanza tra le lancette è la stessa ma B raffigura un overflow del timer perchè ha superato mezzo giorno.  
+**Questo caso viene magicamente risolto dall’ALU**: i designer del micro avevano previsto la possibilità di ovf. Quindi, sapendo che l’ALU fa le somme con il complemento a due (CPL2),  l’ ALU fa diventare il secondo operando negativo e poi somma i due operandi. Però così facendo ho bisogno di 17 bit. L’ALU conserva quest'ultimo nel bit di carry (vedi lo status).  
+
 Unità di misura del timer fosc/4, in tempo ogni colpo avviene ogni 125 ns (sapendo che fosc= 32MHz).
 dt= timer*125ns
-In un microsecondo ci stanno circa 8 volte 125 nanosecondi. Usiamo adeguatamente lo shift per ottenere la misura corretta
+In un microsecondo ci stanno circa 8 volte 125 nanosecondi. Usiamo adeguatamente lo shift per ottenere la misura corretta.
 
 ## APPUNTI ADC LEZIONE 6
 ADC. L’ADC funziona a 8/10 bit. I registri dell’ADC sono ADCON0, ADCON1,ADCON2.
