@@ -67,11 +67,11 @@ Attenti allo switch pin 6 (da schematico e che dovrebbe essere già settato hard
 C’è una parte di codice fissa da impostare se vuoi accendere l’LCD, un pezzo va subito dopo le variabili globali, l’altro pezzo dopo le variabili locali e dopo i registri nel main. LCD si attiva se, ci sono le impostazioni della sua libreria fuori dal main, **se si fa LCD init, i due LCD command** e infine se si scrive su LCD out che cosa mostrare. In particolare l’ultima istruzione è **Lcd_Out(riga, colonna, “cosa vuoi scrivere”). Ricordatevi che le stringhe in C sono un semplice array di char, quindi quando le dichiariamo, una volta dichiarata la dimensione, quella è, non modificabile in runtime**. Quindi mi raccomando rifletti bene sulla dimensione di questo array, che risulta essere un puntatore alla prima cella della stringa. In C non esiste nessun metodo a runtime per conoscere la lunghezza di un vettore. Quando quindi dichiariamo queste stringhe in C dobbiamo usare per forza quello che si chiama carattere di terminazione \0 e indica la terminazione di una stringa. **Quindi quando passo una stringa come variabile, il compilatore legge fino a \0 e poi si ferma**. È importante questa cosa perché se gli passiamo una stringa senza carattere di terminazione lui continua a leggere anche oltre la terminazione di memoria che non appartiene più alla nostra variabile. **Quindi lascia sempre lunghezzastringa+ 1 di spazio o rischi di sbagliare a stampare sull’LCD**. Riguardo all’LCD all’esame ti viene dato un file con la intestazione e la manipolazione base della stringhe.
 Col timer 0 quindi usiamo l’interrupt suo interno per temporizzare e salviamo la variabile ogni quanto abbiamo un interrupt. Per la precisione la frequenza di interrupt è frequenza d’ingresso (Fosc/4), poi diviso il prescaler che va da non attivo a 256. E successivamente tutto dipende dal valore iniziale di TMR0L perché altrimenti non servirebbero 256 impulsi per far avvenire l’overflow se non ci fosse il valore del TMRL0 a zero. Ma ovviamente meno di 255 per la formula scritta successivamente. La configurazione con cui usiamo la nostra scheda è 32MHz, ergo la frequenza di interrupt minima (che corrisponde al massimo tempo tra un interrupt e l’altro che possiamo ottenere in assoluto con il prescaler alla massima divisione), è:  
 
-**f_min=f_osc/(4*256*(256-TMR0L))**
+<code> **f_min = f_osc / ( 4 * 256 * ( 256 - TMR0L ) )** </code>
 
 Ovviamente la frequenza è minima se anche TMR0L è uguale a zero. Il tempo di interrupt si ottiene semplicemente ribaltando la formula:  
 
-**t_max=(4*256*(256-TMR0L))/f_osc**
+<code> **t_max = ( 4 * 256 * ( 256 - TMR0L ) ) / f_osc** </code>
 
 **4/32MHz = 1/8MHz che corrisponde a 125 ns. Questo è fisso, a meno di disabilitare il PLL**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente ma se volessi fare meglio hai 2 opzioni: la prima è salvare bene il valore del tempo di interrupt e/o sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler (Ho fatto il calcolo, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi)**. Come funziona la seconda soluzione? Il valore iniziale del TMR0L, ogni volta che c’è un overflow, si attiva un interrupt ed è lì che dovrei impostare il valore che voglio nel TMR0L. **Per Timer0 impostare registri T0CON e INTCON.**
 
@@ -154,17 +154,34 @@ dt= timer*125ns
 In un microsecondo ci stanno circa 8 volte 125 nanosecondi. Usiamo adeguatamente lo shift per ottenere la misura corretta.
 
 ## APPUNTI ADC LEZIONE 6
-ADC. L’ADC funziona a 8/10 bit. I registri dell’ADC sono ADCON0, ADCON1,ADCON2.
-ADCON0 serve a determinare con i pin da 6-2 il pin scelto per il trasferimento da analogico a digitale. In particolare se pensi di lavorare col sonar a p.22 del datasheet si vede la conversione RC3/AN15 che corrisponde ad 01111. Il pin ADC_GO_NOT_DONE è il bit 1 e quando è alto incomincia la conversione, quando la conversione è completata torna a zero. Il bit 0 di questo registro invece è legato alla abilitazione dell’ADC e deve essere 1.
-ADCON1 è invece il registro delle alimentazioni. Noi di solito lo alimentiamo 0/+5V e quindi lo poniamo semplicemente tutto a 0.
-ADCON2 invece contiene il bit 7 che è legato alla giustificazione, ovvero, dove vengono salvati i bit più significativi e dove i meno significativi. Considera che abbiamo due registri ADRESH e ADRESL e che il massimo dei bit da salvare sarà 10. Se usiamo ADC ad 8 bit allora se giustificato a destra o a sinistra non è importante, basta copiare dal registro corretto il dato. Se invece a 10 bit, 2 bit saranno o nell’High o nel registro Low e come vanno salvati dipende dalla giustificazione. I bit da 5 a 3 permettono di settare il tempo d’acquisizione (tempo di delay dopo che il condensatore del S&H viene bloccato). Nel caso venga settato a 0  appena viene settato il GO dell’ADC parte subito la conversione, la cui lunghezza verrà data da Tad. Attenzione che se l’acquisition time è zero e Tad troppo corto, la conversione non andrà a buon fine. Quindi è sconsigliatissimo tenere l’acquisition time a zero. Di solito si piazza ad un valore che superi almeno 7us quindi se ho un Tad di 1us posso settare l’acquisition time a 16Tad, sul datasheet dice che servono almeno 11Tad per avere una conversione riuscita
-Seleziona il prescaler di fosc per il modulo ADC e, come conseguenza setta la durata di 1 Tad (si può usare anche un clock di un oscillatore dedicato FRC che va a 600Khz
-Nota: Tacqt è il tempo in cui il S&H è ancora agganciato al pin del PIC e quindi il condensatore  è ancora libero di caricarsi prima che intervenga Tad per iniziare l’acquisizione del valore.
-registri.
-RICORDA DI CONFIGURARE BENE I PORT con ansel=1 e tris=1
-Nota: potrei anche tenere il buffer input digitale acceso con ANSEL=0 però consumerebbe potenza a caso, la conversione avviene correttamente a priori)
-Nota: ADIF è settato alla fine di ogni conversione a prescindere dall’interrupt abilitato o no
-Nota: il GO/DONE non deve essere messo nella stessa istruzione in cui viene acceso l’ADC
+**L’ADC funziona a 8 oppure 10 bit** .  
+I registri dell’ADC da settare sono **ADCON0 ADCON1 ADCON2** .  
+- **ADCON0** serve a determinare attraverso i bit da 6 a 2 il pin scelto del uC per la conversione.  
+In particolare se voglio lavorare con il sonar uso **RC3(AN15)** che corrisponde ad **01111**.  Inoltre il bit **ADCON0.ADC_GO_NOT_DONE** fa partire la conversione se alto. Quando la conversione è completata torna a zero. Il bit **ADCON0.ADON** abilita l'ADC e deve essere impostato a 1 per accenderlo.
+
+- **ADCON1** è invece il registro delle alimentazioni. Noi di solito lo alimentiamo 0/+5V e quindi lo poniamo semplicemente tutto a 0.
+- **ADCON2** invece contiene il bit 7 che è legato alla giustificazione, ovvero, dove vengono salvati i bit più significativi e dove i meno significativi. Considera che abbiamo due registri **ADRESH** e **ADRESL** e che il massimo dei bit da salvare sarà 10.
+
+Se usiamo l'ADC ad 8 bit non è importante giustificare a destra o sinistra, basta copiare dal registro corretto (HIGH/LOW) il dato.  
+
+**Se invece lo voglio a 10 bit**, 2 bit saranno o nell’High o nel registro Low e viceversa, a seconda di come viene giustificato.  
+
+**I bit da 5 a 3** permettono di settare il tempo d’acquisizione (tempo di delay dopo che il condensatore del S&H viene bloccato). Nel caso venga settato a 0 appena viene settato il bit GO dell’ADC parte immediatamente la conversione, la cui lunghezza verrà data da Tad.  
+
+**NB: attenzione che se l’acquisition time è zero e Tad troppo corto, la conversione non andrà a buon fine**. Quindi è sconsigliatissimo tenere l’acquisition time a zero.  
+Di solito si piazza ad un valore che superi almeno 7us quindi se ho un Tad di 1us posso settare l’acquisition time a **16Tad**, sul datasheet dice che servono almeno **11Tad per avere una conversione riuscita**.
+
+Seleziona il prescaler di fosc per il modulo ADC e, come conseguenza setta la durata di 1 Tad (si può usare anche un clock di un oscillatore dedicato FRC che va a 600Khz.  
+
+**NB:** Tacqt è il tempo in cui il S&H è ancora agganciato al pin del PIC e quindi il condensatore  è ancora libero di caricarsi prima che intervenga Tad per iniziare l’acquisizione del valore.
+
+**NB:** ricorda di configurare bene i **PORT** con **ANSELx=1** e **TRISx=1**
+
+**NB:** potrei anche tenere il buffer input digitale acceso con **ANSEL=0** però consumerebbe potenza a caso, la conversione avviene correttamente a priori).
+
+**NB: ADIF** è settato alla fine di ogni conversione a prescindere dall’interrupt abilitato o no
+
+**NB:** il **ADC_GO_NOT_DONE** non deve essere messo nella stessa istruzione in cui viene acceso l’ADC.
 
 ## APPUNTI SUL PWM LEZIONE 7
 PWM. Il PWM è un modulo che permette di generare un’onda quadra con duty cycle variabile. Viene spesso usato per alimentare a diverse potenze un carico.
