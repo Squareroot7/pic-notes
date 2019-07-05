@@ -10,6 +10,10 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 5. [APPUNTI SONAR (CCP) LEZIONE 4](#appunti-sonar-ccp-lezione-4)
 6. [APPUNTI ADC LEZIONE 6](#appunti-adc-lezione-6)
 7. [APPUNTI SUL PWM LEZIONE 7](#appunti-sul-pwm-lezione-7)
+8. [QUALI ISTRUZIONI AFFLIGGONO LO STATUS?](#quali-istruzioni-affliggono-lo-status)
+9. [COS’È LO STATUS?](#cos-lo-status)
+10. [SPIEGAZIONE ALCUNE ISTRUZIONI ASM (RIVEDERE GOTO E BRA CON PIC16 PIC18)](#spiegazione-alcune-istruzioni-asm-rivedere-goto-e-bra-con-pic16-pic18)
+11. [DIRETTIVE ASM](#direttive-asm)
 
 <!-- /TOC -->
 
@@ -106,6 +110,7 @@ Utilizziamo il sonar nella modalità Pulse Width Output, ovvero genera un impuls
 Analizziamo il sonar:
 - Pin 2 dove c’è l’uscita dell’impulso collegato in ampiezza RC2
 - Pin 4 serve a dire che il sensore effettua la misura ogni volta che trova il rising edge, che corrisponde all’RC6 dal punto di vista del micro. Se lo teniamo alto sempre fa lo stream continuo dei dati. 100mS per ogni misura (enorme tempo macchina per il nostro pic, tra una misura e l’altra il nostro PIC potrebbe fare una miriade di operazioni).
+
 1mm di risoluzione, minima distanza misurata 30 cm, ovvero 300 mm.
 Il nostro PIC ci offre a disposizione un modulo che, senza usare cicli macchina ci permette di far partire le misurazioni in automatico mentre noi svolgiamo le altre operazioni, ovvero il modulo CCP capture. Il modulo CCP vuol dire capture compare e pwm. Noi lo usiamo col sonar in modalità capture.
 Esistono 5 moduli CCP in totale collegati a tre pin, non tutti gli I/O possono essere usati per questa funzione. Il modulo capture si appoggia ad un timer(TMR1/3/5) e lo utilizza in modalità 16 bit. Quando dal pin esterno riceve un rising/falling edge, lui va a campionare il valore del timer su un registro che noi possiamo andare a leggere. All’arrivo dell’evento campiona e salva il valore del timer in un registro. Nel nostro caso abbiamo Timer 1 utilizzato in free running a fosc/4, ovvero la frequenza massima in questa modalità. Il contatore del timer non fa altro, ovviamente, che sommare al tempo più uno. NB: disabilita l’interrupt del timer. Bisogna utilizzare l’interrupt del CAPTURE. Ogni volta che cambio rising e falling (modalità per acquisire la distanza percorsa dal segnale), rischio che scatti un interrupt.
@@ -139,3 +144,37 @@ Quindi, con l’uscita alta, TMRx riparte a contare. Ad un certo punto conta fin
 Come aumento la frequenza? Diminuisco PRx  la risoluzione diminuisce.
 La risoluzione del CCP viene dettata da PRx (se ho PR=5 ho solo 5 passi modificabili). Ho risoluzione massima con prescaler a 1 f=fosc/4. Di conseguenza ogni passo è 125ns con un osc di 32M. Avessimo un prescaler di 16 allora 125ns *16=2us.
 Definiamo il duty cycle=CCPL/PRx (in cui PRx è un registro a 8 bit)
+
+# PARTE SU ASSEMBLY  
+## QUALI ISTRUZIONI AFFLIGGONO LO STATUS?
+- Tutte le operazioni di addizione (ADDWF ADDLW), sottrazione (SUBWF SUBLW) affliggono i bit C (carry) DC (digit carry) Z (Zero bit)
+- Le rotate left e rotate right (RLF RRF) affliggono il bit C (carry) perché ho bisogno di 1 bit da salvare da qualche parte mentre sto shiftando
+
+- Tutte le operazioni di incremento e decremento non condizionali affliggono il bit Z
+- Le operazioni logiche ANDWF CLEARF CLEARW COMF IORWF MOVF XORWF ANDLW IORLW  XORLW affliggono il bit Z
+- Tutte le operazioni rimanenti non affliggono lo status (esempio lo swap dei nibbles)
+
+## COS’È LO STATUS?
+Lo STATUS è uno dei registri più importanti del microcontrollore. Esso contiene dei bit legati alle operazioni effettuate dall’ALU, il bit dello stato di RESET e i bit del controllo del paging dei banchi di memoria.
+
+
+
+## SPIEGAZIONE ALCUNE ISTRUZIONI ASM (RIVEDERE GOTO E BRA CON PIC16 PIC18)
+GOTO XXX: aggiorna il PC ad un’etichetta designata. La dimensione dell’indirizzo dell’etichetta è di 11 bit È sensibile al paging, infatti il bit 12 e 13 vengono acchiappati da PCLATH. Quindi usare BANKSEL. Nei PIC18 il PC è a 21 bit assoluti, il goto è a 20bit quindi può spostarti ovunque in 2M di memoria (in due cicli), ma c’è il problema del paging con PCLATU (non più H)
+BRA XXX: è un salto (un po’ come il goto) relativo all’istruzione di partenza. Posso spostarmi di massimo +-1023 posizioni dall’indirizzo di partenza. Essendo un salto condizionale partendo dal valore del PC corrente, non è affetto dal paging (non è disponibile nei PIC16).
+RETFIE: specifica il return dall’interrupt (quindi sposta quello che c’era nel Top Of Stack nel PC) e riattiva il general interrupt GIE (che è stato disattivato all’ingresso della routine dell’interrupt).
+CALL: va all’etichetta, esattamente come il goto, quindi è affetto da paging (USARE BANKSEL). Si salva nello stack il PC corrispondente alla posizione di chiamata. Appena la routine chiamata dal CALL, il PC viene rishiftato al chiamante.
+
+
+## DIRETTIVE ASM
+#include: tale e quale a C++. Si usa con #include <p18f452.inc>
+UDATA: dichiara l’inizio di una sezione di dati non inizializzati. Per riservare lo spazio in questa sezione bisogna utilizzare la direttiva RES. L’utilizzo è “LABEL res #byte”.Se non vengono specificate label e indirizzo, (es VARIABLES_IN_BANK udata 0x20) si scrive .udata e il linker fa tutto da sé.
+BANKSEL XXX: Serve per selezionare automaticamente il bank in base all’etichetta desiderata. Quindi se voglio selezionare un TRISB e non so dove sono, scrivo BANKSEL TRISB. Questo mi permette di poter mettere (con le dovute precauzioni della scelta del micro) lo stesso codice su un altro micro senza preoccuparmi del Bank da selezionare.
+CODE XXXX : (indirizzo opzionale) significa che il linker può piazzare il codice nella program memory all’indirizzo specifico XXXX segnalato dall’utente, oppure viene lasciata libera la scelta dell’indirizzo al linker se XXXX non viene specificato.
+END: specifica all’assembler che questa è la fine del file asm. Ogni file asm deve necessariamente finire con la direttiva END. Se così non fosse, l’assembler continuerebbe a passare tutta la memoria.
+equ: analogo del define del c++. Si scrive come “PORTCACCA equ PORTD” (etichetta eq nome_indirizzo_in_RAM).
+DIFFERENZE TRA PSEUDO-ISTRUZIONI, MACRO, DIRETTIVE
+Direttiva: una direttiva assembler è un comando utilizzato a livello software che compare nel source code ma non è direttamente traducibile come opcode. Di conseguenza una direttiva non compare nell’instruction set del datasheet del PIC ma nella User’s guide del MPASM™ Assembler.
+Pseudo-istruzione: istruzione ASM scritta con parole diverse in modo tale da agevolare la memorizzazione. Per esempio, nel PIC16 , c’è MOVWF, mentre la sua “complementare” dovrebbe essere MOVFW. Nelle istruzioni del datasheet però esiste solo MOVF, w.
+L’assemblatore via software permette di tradurre direttamente MOVF,w tramite la pseudo-istruzione MOVFW, in modo tale da avere meno confusione nel codice e migliore memorizzazione.
+Macro: può essere considerata come “un’istruzione” a livello di sviluppo software, ma in realtà è una routine di istruzioni unificate sotto un unico nome. A differenza delle funzioni in linguaggio C, la macro è una sostituzione in-line. Questo significa che non viene effettuata una call, non viene cambiato il PC, non viene allocato spazio nello stack. Il contenuto della macro viene semplicemente inserito in quel punto del programma. Per l’utilizzo leggi la User’s guide del MPASM™ Assembler.
