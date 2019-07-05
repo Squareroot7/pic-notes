@@ -71,5 +71,44 @@ Ovviamente la frequenza è minima se anche TMR0L è uguale a zero. Il tempo di i
 ## APPUNTI LEZIONE 3 ( NOTA BENE PER ORALE )
 Vediamo come mai posso rischiare di entrare due volte nella ISR dato un interrupt on change. Premo un bottone. Il valore logico di tensione che è fisicamente su PORTB hardware è 1 perché io sto premendo il bottone. Sulla XOR in alto l’uscita è 1. Quando l’uscita di quella XOR è 1, in automatico RBIF è automaticamente portato ad 1, il main si ferma ed entriamo in ISR. Ora che siamo nella ISR INTCON.RBIF==1? Sì perché la flag è partita con la pressione del bottone.
 
-Invece se resetti subito il flag ma non fai nessuna lettura della PORTB, lo XOR è ancora a 1, il PIC rialza il flag: questo perché la Q del flip flop non è cambiata, ()()() è ancora 0, ma noi su PORTB stiamo ancora premendo il pulsante quindi c’è un mismatch e l’uscita dello XOR è ancora 1. Ma quindi, dato che la flag è ancora alta, appena esco dal primo ISR rientro subito ed eseguo ISR una seconda volta, tutto questo mentre io sto ancora premendo il pulsante. Ancora una volta INTCON.RBIF==1, resetto la flag alla prima riga della ISR ma la seconda volta non è più vero che c’è il mismatch perché l’uscita del flip flop è stata aggiornata dalla ISR precedente (abbiamo fatto una read sulla PORTB tramite la condizione if (PORTB.RB6) appena dopo aver buttato giù la flag). L’uscita della XOR ora è a 0 e non rientrerò più nel ISR.
+Invece se resetti subito il flag ma non fai nessuna lettura della PORTB, lo XOR è ancora a 1, il PIC rialza il flag: questo perché la Q del flip flop non è cambiata, è ancora 0, ma noi su PORTB stiamo ancora premendo il pulsante quindi c’è un mismatch e l’uscita dello XOR è ancora 1. Ma quindi, dato che la flag è ancora alta, appena esco dal primo ISR rientro subito ed eseguo ISR una seconda volta, tutto questo mentre io sto ancora premendo il pulsante. Ancora una volta INTCON.RBIF==1, resetto la flag alla prima riga della ISR ma la seconda volta non è più vero che c’è il mismatch perché l’uscita del flip flop è stata aggiornata dalla ISR precedente (abbiamo fatto una read sulla PORTB tramite la condizione if (PORTB.RB6) appena dopo aver buttato giù la flag). L’uscita della XOR ora è a 0 e non rientrerò più nel ISR.
 Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORTB mi frego e rientro due volte nella stessa ISR ad ogni pressione del pulsante dell’interrupt on change.
+
+**APPUNTI SONAR (CCP) LEZIONE 4**
+Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da ricordare sono principalmente:  
+1.	Il sonar è collegato alla porta C. Se il sonar viene utilizzato in modalità Pulse Width Output, usare digital IN RC2 (anselc=0 trisc=1); sennò uso RC3 come Analog In e devo usare l’ADC.
+
+2.	Il sonar si appoggia al Timer TXCON per registrare i dati raccolti, che li sovrascrive nel registro del capture CCPXCON (16 bit), ovvero i registri CCPXH e CCPXL (8 bit), high e low rispettivamente. I timer dispari sono per il capture and compare mentre per il pwm si usano i timer pari. Si imposta il timer con il registro CCPTMRS0.
+3.	È una periferica, quindi per attivarne l’interrupt il sesto bit di INTCON deve essere ad uno, oltre al settimo bit GIE
+4.	L’attivazione degli interrupt non è solo legata al registro INTCON ma anche ai registri PIEX E PIRX. Cercare il numero corretto del registro a cui sostituire la X. Ci sono cinque registri per gli interrupt.
+5.	Se vuoi lo stream continuo dei dati LATC.RC6=1 va scritto sempre, inoltre deve essere output (stream continuo in uscita), quindi TRISC del bit 6 è sempre; Gli altri bit si possono mettere benissimo in modalità input, in particolare RC2 o RC3 (digiale/analogico)
+6.	Non dimenticare la routine di interrupt che è sempre identica:
+```sh
+if(PIR1.CCP1IF){
+if(CCP1CON.CCP1M0){	          // If we are sensing the Rising-Edge
+ta = ( CCPR1H << 8 ) + CCPR1L; //merge 8 and 8 bit in 16 bit
+CCP1CON.CCP1M0 = 0;            // Set Sense to Falling
+		}
+		else{	                    // If we are sensing the Falling-Edge
+tb = ( CCPR1H << 8 ) + CCPR1L;
+   		width = tb - ta;
+CCP1CON.CCP1M0 = 1;            // Set Sense to Rising
+		}
+PIR1.CCP1IF = 0;
+}
+```
+
+Il sonar e il radar vengono utilizzati per misurare le distanze lanciando dei segnali e contando il tempo che impiegano a tornare. 
+Utilizziamo il sonar nella modalità Pulse Width Output, ovvero genera un impulso proporzionale alla distanza misurata 1mm=1us di conversione.
+Analizziamo il sonar:
+- Pin 2 dove c’è l’uscita dell’impulso collegato in ampiezza RC2
+- Pin 4 serve a dire che il sensore effettua la misura ogni volta che trova il rising edge, che corrisponde all’RC6 dal punto di vista del micro. Se lo teniamo alto sempre fa lo stream continuo dei dati. 100mS per ogni misura (enorme tempo macchina per il nostro pic, tra una misura e l’altra il nostro PIC potrebbe fare una miriade di operazioni).
+1mm di risoluzione, minima distanza misurata 30 cm, ovvero 300 mm.
+Il nostro PIC ci offre a disposizione un modulo che, senza usare cicli macchina ci permette di far partire le misurazioni in automatico mentre noi svolgiamo le altre operazioni, ovvero il modulo CCP capture. Il modulo CCP vuol dire capture compare e pwm. Noi lo usiamo col sonar in modalità capture.
+Esistono 5 moduli CCP in totale collegati a tre pin, non tutti gli I/O possono essere usati per questa funzione. Il modulo capture si appoggia ad un timer(TMR1/3/5) e lo utilizza in modalità 16 bit. Quando dal pin esterno riceve un rising/falling edge, lui va a campionare il valore del timer su un registro che noi possiamo andare a leggere. All’arrivo dell’evento campiona e salva il valore del timer in un registro. Nel nostro caso abbiamo Timer 1 utilizzato in free running a fosc/4, ovvero la frequenza massima in questa modalità. Il contatore del timer non fa altro, ovviamente, che sommare al tempo più uno. NB: disabilita l’interrupt del timer. Bisogna utilizzare l’interrupt del CAPTURE. Ogni volta che cambio rising e falling (modalità per acquisire la distanza percorsa dal segnale), rischio che scatti un interrupt.
+Il timer 1 è un contatore da 16 bit, prima o poi andrà in overflow, se la misura viene presa prima e dopo essere andato in overflow? Come si fa? Analizziamo (esempio dell’orologio)
+La distanza tra le lancette è la stessa ma B fa overflow. Questo caso viene magicamente risolto dall’ALU: i designer del micro avevano previsto la possibilità di ovf. Quindi, sapendo che l’ALU fa le somme con il complemento a due (CPL2),  l’ ALU fa diventare il secondo operando negativo e poi somma i due operandi. Però così facendo ho bisogno di 17 bit. L’ALU conserva questo 17esimo bit in un posto chiamato bit di carry.
+Dobbiamo quindi impostare il timer 1 e poi abilitare gli interrupt.
+Unità di misura del timer fosc/4, in tempo ogni colpo avviene ogni 125 ns (sapendo che fosc= 32MHz).
+dt= timer*125ns
+In un microsecondo ci stanno circa 8 volte 125 nanosecondi. Usiamo adeguatamente lo shift per ottenere la misura corretta
