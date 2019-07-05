@@ -1,5 +1,5 @@
 
-<!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:1 -->
+<!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:1 -->
 
 1. [GPIO SETUP](#gpio-setup)
 2. [APPUNTI TIMER0 LEZIONE 2](#appunti-timer0-lezione-2)
@@ -7,7 +7,7 @@
 
 <!-- /TOC -->
 
-# GPIO SETUP
+## GPIO SETUP
 
 NB: pin settati in input per default. Quando si setta un digital out scrivere sempre LATx=0 per reset.
 
@@ -32,7 +32,7 @@ Ogni port ha diversi registri:
 - **PORTD**: spesso usata per operazioni con i led (tutta la porta).
 - **PORTE**: usata per un PWM, PWM software o per dei led di segnalazione
 
-# APPUNTI TIMER0 LEZIONE 2
+## APPUNTI TIMER0 LEZIONE 2
 Il TIMER0 è per definizione un contatore che subisce un overflow dopo un tempo definito dall'utente attraverso setup dei registri dedicati.
 Si parte da un oscillatore esterno o interno. Mediante un multiplexer possiamo la frequenza di incremento del contatore. **la nostra frequenza tipica è Fosc/4 in cui, grazie al PLL, Fosc è 32MHz (8MHz di default)**.
 
@@ -42,7 +42,7 @@ Successivamente alla selezione della sorgente c'è la scelta del sì o no presca
 
 Ultima selezione, tralascando il sync clock, che dice semplicemente che devono passare due colpi di clock per aggiornare il timer, abbiamo il registro **TMR0L (registro low del timer 0)**. È un registro a 8 bit, i meno significativi del nostro registro di timer. **Questo registro è un altro contatore che setta la flag dell'interrupt TMR0IF quando va in overflow**. Se disabilito l’interrupt posso usarlo anche solo come contatore. **Il registro principale per configurare è T0CON**.
 
-# APPUNTI LCD LEZIONE 2
+## APPUNTI LCD LEZIONE 2
 
 Lo schermo LCD è composto da due righe e 16 colonne. La cosa importante da capire a riguardo è che per comunicare con questo display c’è un protocollo apposito, altrimenti dovremmo comunicare con la memoria interna dell’LCD. Per semplificarci la vita noi useremo la sua libreria che è ad un “livello di astrazione più alto” rispetto al manipolare l’LCD noi. Fabio dice “se volete imparare sta roba fatelo ma è inutile lol”.
 
