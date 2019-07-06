@@ -8,7 +8,7 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 3. [APPUNTI LCD LEZIONE 2](#appunti-lcd-lezione-2)
 4. [APPUNTI LEZIONE 3 ( NOTA BENE PER ORALE )](#appunti-lezione-3-nota-bene-per-orale-)
 5. [APPUNTI SONAR (CCP) LEZIONE 4](#appunti-sonar-ccp-lezione-4)
-6. [APPUNTI **ADC** LEZIONE 6](#appunti-**ADC**-lezione-6)
+6. [APPUNTI ADC LEZIONE 6](#appunti-ADC-lezione-6)
 7. [APPUNTI SUL PWM LEZIONE 7](#appunti-sul-pwm-lezione-7)
 8. [QUALI ISTRUZIONI AFFLIGGONO LO STATUS?](#quali-istruzioni-affliggono-lo-status)
 9. [COS’È LO STATUS?](#cos-lo-status)
@@ -89,7 +89,7 @@ Attenzione anche allo switch pin 6 (dallo schema e che dovrebbe essere già sett
 **Rimangono liberi B6 e B7**. Se abbiamo il display collegato da B0 a B5 non possono essere usati per altro se non per l’LCD. L’IOCB era dal B7 al B4. Ma se abbiamo intenzione di usare come In Circuit Debugger, **quindi se vogliamo usare il debugger per capire cosa non va nel nostro programma, anche B6 e B7 risulteranno fuori uso**. Per questo motivo l’IOCB non lo useremo più dai prossimi laboratori, ma ci concentreremo sulle altre porte, precisamente sul quando ci sarà una transazione di stato su qualunque pin.  
 
 C’è una parte di codice fissa da impostare se vuoi accendere l’LCD:
-```sh
+```Sh
 // Lcd module connections
 sbit LCD_RS at LATB4_bit;
 sbit LCD_EN at LATB5_bit;
@@ -111,9 +111,9 @@ void main(){
   Lcd_init();
   Lcd_Cmd(_LCD_CLEAR);
   Lcd_Cmd(_LCD_CURSOR_OFF);
-  .
+  //.
   //main code and while(1);
-  .
+  //.
 }
 ```
 **NB**: ricordati di attivare la libreria LCD e la parte di conversione delle char nell sezione delle librerie nell'IDE MikroC.
@@ -135,8 +135,9 @@ Ora che siamo nella ISR **INTCON.RBIF==1** ? Sì, la flag è partita alla pressi
 Se ora resetto subito la flag ma non faccio nessuna lettura della **PORTB**, la **XOR** è ancora a 1, il PIC rialza la flag: questo perché la Q del flip flop non è stata cambiata (non ho letto niente ancora), è ancora 0, ma su **PORTB** il pulsante è ancora premuto quindi c’è un mismatch e l’uscita dello XOR è ancora 1. Ma quindi, dato che la flag è ancora alta, appena esco dal primo ISR rientro subito ed eseguo ISR una seconda volta, tutto questo mentre io sto ancora premendo il pulsante. Ancora una volta INTCON.RBIF==1, resetto la flag alla prima riga della ISR ma la seconda volta non è più vero che c’è il mismatch perché l’uscita del flip flop è stata aggiornata dalla ISR precedente (abbiamo fatto una read sulla PORTB tramite la condizione if (PORTB.RB6) appena dopo aver buttato giù la flag). L’uscita della XOR ora è a 0 e non rientrerò più nel ISR.
 Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORTB mi frego e rientro due volte nella stessa ISR ad ogni pressione del pulsante dell’interrupt on change.
 
-```sh
-void interrupt(){ // ISR SCORRETTO
+```Sh
+// ******ISR SCORRETTO******
+void interrupt(){
 if(INTCON.REIF){ //flag alzata da PORTB
 INTCON.RBIF=0; //Reset della flag
 // a questo punto accade il mismatch
@@ -144,7 +145,8 @@ INTCON.RBIF=0; //Reset della flag
 if(PORTB.RB6)} i++; // leggo PORTB quindi alla isr dopo
 if(PORTB.RB) i--; // avrò aggiornato il flip flop
 
-void interrupt(){ // ISR CORRETTO
+// ******ISR CORRETTO******
+void interrupt(){
 if(INTCON.REIF){ // flag alzata da PORTB
 if(PORTB.RB6)} i++; // leggo PORTB ->Flip Flop aggiornato!
 if(PORTB.RB) i--; // altro refresh di PORTB
@@ -163,13 +165,13 @@ Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da
 6.	Non dimenticare la routine di interrupt che è sempre identica:
 
 
-```sh
+```Sh
 if(PIR1.CCP1IF){
   if(CCP1CON.CCP1M0){	          // If we are sensing the Rising-Edge
-    ta = ( CCPR1H << 8 ) + CCPR1L; //merge 8 and 8 bit in 16 bit
+    ta = ( CCPR1H << 8 ) + CCPR1L; // merge 8 and 8 bit in 16 bit
     CCP1CON.CCP1M0 = 0;            // Set Sense to Falling
 	}
-  else{	                    // If we are sensing the Falling-Edge
+  else{	                        // If we are sensing the Falling-Edge
     tb = ( CCPR1H << 8 ) + CCPR1L;
     width = tb - ta;
     CCP1CON.CCP1M0 = 1;            // Set Sense to Rising
@@ -207,20 +209,100 @@ Unità di misura del timer fosc/4, in tempo ogni colpo avviene ogni 125 ns (sape
 dt= timer*125ns
 In un microsecondo ci stanno circa 8 volte 125 nanosecondi. Usiamo adeguatamente lo shift per ottenere la misura corretta.
 
-## APPUNTI **ADC** LEZIONE 6
-L’**ADC** funziona a 8 oppure 10 bit** .  
+**Vediamo ora un esempio** dell'utilizzo del Sonar con l'LDC:
+
+```Sh
+// Lcd module connections
+sbit LCD_RS at LATB4_bit;
+sbit LCD_EN at LATB5_bit;
+sbit LCD_D4 at LATB0_bit;
+sbit LCD_D5 at LATB1_bit;
+sbit LCD_D6 at LATB2_bit;
+sbit LCD_D7 at LATB3_bit;
+
+sbit LCD_RS_Direction at TRISB4_bit;
+sbit LCD_EN_Direction at TRISB5_bit;
+sbit LCD_D4_Direction at TRISB0_bit;
+sbit LCD_D5_Direction at TRISB1_bit;
+sbit LCD_D6_Direction at TRISB2_bit;
+sbit LCD_D7_Direction at TRISB3_bit;
+// End Lcd module connections
+
+// fosc/4= 125ns quindi nel registro devo fare
+// 1mm è 1us, in 1us ci stanno 8 volte 125ns, quindi uso uno shift
+// delta tempo= differenza contatore * 125ns
+
+// VARIABILI GLOBALI
+unsigned int       t_rise=0, t_diff=0;
+
+void main() {
+	char txt_num[7], txt_lcd[17];
+	//-----PORTS INIT-----
+	ANSELC=        0b11111011; // setto l'input da leggere dove il sonar mi dà l'impulso
+	TRISC=         0b10111111; // settare l'uscita per dire al sonar di continuare a leggere
+	LATC.RC6=1;				// imposto l'uscita alta
+
+	//-----CONFIG TIMER 1-----
+	T1CON=         0b00000011; // pagina 166 impostato fosc/4, senza prescaler, senza secondo osc dedicato, timer abilitato e scrittura LOW/HIGH abilitata
+
+	//-----CONFIG CCP1-----
+	CCP1CON=       0b00000101; // pagina 198 100 capture mode falling edge, 101 rising edge, basta fare ++ e -- nella isr per cambiare modalità
+	CCPTMRS0=      0x0;        // pagina 201 capture compare mode using TMR1
+
+	//-----INTERRUPT CONFIG-----
+	INTCON=        0b11000000; // pagina 109 global e peripheral abilitati
+	PIR1=          0x0;        // pagina 112 CONTIENE flag del CCP1
+	PIE1=          0b00000100; // pagina 117 abilitato interrupt CCP1
+	//-----LCD INIT -----
+	Lcd_init();
+	Lcd_Cmd(_LCD_CLEAR);
+	Lcd_Cmd(_LCD_CURSOR_OFF);
+	Lcd_Out(1, 1, "hello world");
+
+	while(1){
+		if(t_diff != 0){
+			t_diff = 0;						//resetta conta temporale
+			IntToStr(t_diff, txt_num);     	//converti distanza in stringa
+			strcpy(txt_lcd, "dist = ");		//inserisci dist = nella stringa txt_lcd
+			strcat(txt_lcd, txt_num);		  //unisci la stringa txt_num nella stringa txt_lcd
+			Lcd_Out(1, 1, txt_lcd);			//stampa stringa txt_lcd
+		}
+	}
+}
+void interrupt(){
+	if(PIR1.CCP1IF){ 							//se c'è stato un interrupt ccp
+		if(CCP1CON.CCP1M0){        			  //if rising
+			t_rise = (CCPR1H<<8) + CCPR1L;	   //inserisci i due registri nel tempo di salita
+			CCP1CON=0b00000100; 			 	//switch ccp mode to falling
+		}
+		else{
+			t_diff = (CCPR1H<<8)  + CCPR1L;      // inserisci i due registri nel tempo di discesa
+			t_diff -= t_rise;    				// calcolo il delta tempo (se fa ovf non c'è problema per la storia del Complemento a due e non mi interesso del bit ovf)
+			t_diff= t_diff>>3;   				// delta tempo= differenza contatore * 125ns che sarà anche la nostra distanza in mm
+			CCP1CON=0b00000101; 				 // switch ccp mode to rising
+		}
+		PIR1.CCP1IF=0;          			 	// disattivo flag interrupt
+	}
+}
+```
+
+
+
+
+## APPUNTI ADC LEZIONE 6
+L’**ADC funziona a 8 oppure 10 bit** .  
 I registri dell’**ADC** da settare sono **ADCON0 ADCON1 ADCON2** .  
 - **ADCON0** serve a determinare attraverso i bit da 6 a 2 il pin scelto del uC per la conversione.  
 In particolare se voglio lavorare con il sonar uso **RC3(AN15)** che corrisponde ad **01111**.  Inoltre il bit **ADCON0.ADC_GO_NOT_DONE** fa partire la conversione se alto. Quando la conversione è completata torna a zero. Il bit **ADCON0.ADON** abilita l'**ADC** e deve essere impostato a 1 per accenderlo.
 
-- **ADCON1** è invece il registro delle alimentazioni. Noi di solito lo alimentiamo 0/+5V e quindi lo poniamo semplicemente tutto a 0.
-- **ADCON2** invece contiene il bit 7 che è legato alla giustificazione, ovvero, dove vengono salvati i bit più significativi e dove i meno significativi. Considera che abbiamo due registri **ADRESH** e **ADRESL** e che il massimo dei bit da salvare sarà 10.
+- **ADCON1** è invece il registro delle alimentazioni. Noi di solito lo alimentiamo 0/+5V e quindi semplicemente **ADCON1=0**.
+- **ADCON2** invece contiene il bit 7 che è legato alla **giustificazione**(dove vengono salvati i bit più significativi e dove i meno significativi). Considera che abbiamo due registri **ADRESH** e **ADRESL** e che il massimo dei bit da salvare sarà 10. Esso contiene anche la selezione del numero di **Tad** (vedi sotto) e la frequenza che comanda l'**ADC**.
 
-Se usiamo l'**ADC** ad 8 bit non è importante giustificare a destra o sinistra, basta copiare dal registro corretto (HIGH/LOW) il dato.  
+Se usiamo l'**ADC** ad 8 bit non è importante giustificare a destra o sinistra, basta ricordare il registro corretto (HIGH/LOW, 8 bit ciascuno) che contiene il dato.  
 
 **Se invece lo voglio a 10 bit**, 2 bit saranno o nell’High o nel registro Low e viceversa, a seconda di come viene giustificato.  
 
-**I bit da 5 a 3** permettono di settare il tempo d’acquisizione (tempo di delay dopo che il condensatore del S&H viene bloccato). Nel caso venga settato a 0 appena viene settato il bit GO dell’**ADC** parte immediatamente la conversione, la cui lunghezza verrà data da Tad.  
+**I bit da 5 a 3 di ADCON2** permettono di settare **il tempo d’acquisizione** (tempo di delay dopo che il condensatore del S&H viene bloccato, scandito in numero di Tad). Nel caso venga settato a 0 appena viene settato il bit GO dell’**ADC** parte immediatamente la conversione, la cui lunghezza verrà data da Tad.  
 
 **NB: attenzione che se l’acquisition time è zero e Tad troppo corto, la conversione non andrà a buon fine**. Quindi è sconsigliatissimo tenere l’acquisition time a zero.  
 Di solito si piazza ad un valore che superi almeno 7us quindi se ho un Tad di 1us posso settare l’acquisition time a **16Tad**, sul datasheet dice che servono almeno **11Tad per avere una conversione riuscita**.
@@ -231,11 +313,30 @@ Seleziona il prescaler di fosc per il modulo **ADC** e, come conseguenza setta l
 
 **NB:** ricorda di configurare bene i **PORT** con **ANSELx=1** e **TRISx=1**
 
-**NB:** potrei anche tenere il buffer Input digitale acceso con **ANSEL=0** però consumerebbe potenza a caso, la conversione avviene correttamente a priori).
+**NB:** potrei anche tenere il buffer Input digitale acceso con **ANSELx=0** però consumerebbe potenza a caso, la conversione avviene correttamente a priori).
 
 **NB: ADIF** è settato alla fine di ogni conversione a prescindere dall’interrupt abilitato o no
 
-**NB:** il **ADC_GO_NOT_DONE** non deve essere messo nella stessa istruzione in cui viene acceso l’**ADC**.
+**NB:** il **ADC_GO_NOT_DONE** non deve essere messo nella stessa istruzione in cui viene acceso l’**ADC**.  
+
+Esempio di configurazione dell'**ADC**:
+
+```Sh
+// set TRIS here if needed
+ANSELC = 0b00001000;    //RC3 --> AN15
+ADCON2 = 0b10101110;
+//         +---------Right justified
+//           +++-----Tacquisition = 12Tad
+//              +++--Fosc/64  
+ADCON1 = 0b00000000;    // Use all internal voltage supply range
+ADCON0 = 0b00111101;    // DO NOT SET ADC.GO_NOT_DONE HERE
+//          +++++----RA15
+//                +--ADC ON
+PIR1 = 0;               // reset all flags (adc,ccp,tmr1 ecc)
+PIE1.ADIE = 1;          // enable ADC interrupt
+INTCON = 0b11000000;    // enable GIE and PIE
+ADCON0.GO_NOT_DONE = 1; // Start ADC Acquisition
+```
 
 ## APPUNTI SUL PWM LEZIONE 7
 Il **PWM** è un modulo che permette di generare un’onda quadra con duty cycle variabile. Viene spesso usato per alimentare a diverse potenze un carico.
@@ -272,6 +373,83 @@ La risoluzione del **CCP** viene dettata da PRx (Nota: se ho PR=5 ho solo 5 pass
 Vado ora a definire il duty cycle  
 <code>duty cycle=CCPL/PRx </code> (in cui PRx è un registro a 8 bit)
 
+Per il PWM ho solo due moduli CCP (4/5) che ne permettono l'utilizzo. Come posso sviare da questo? Mi costruisco un **PWM software** utilizzabile su praticamente qualsiasi pin del uC, come nell'esempio seguente:
+```Sh
+unsigned short int pwm_cnt=0;
+unsigned int time_cnt1=0, time_set1 = 100;
+void main() {  
+  unsigned short int pwm_period=255, //set del periodo del pwm
+  hi_period=5;           //set della parte HI del pwm (  1  <  hi_period  <  pwm_period  )
+  TRISD=0; 		      //setto la porta D come output
+  LATD=1;  		      //butto tutto a zero
+  T0CON=  0b11000000;    //attiva timer, attivalo a 8 bit e attivalo a 256 prescaler
+  INTCON= 0b10100000;    //attiva timer 0 interrupt
+  while(1){
+	   if(pwm_cnt<=hi_period) LATD.RD0=1; //se sono ancora nella parte alta del pwm
+           else LATD.RD0=0;                   // toggle del pin verso la parte bassa
+           if(pwm_cnt==pwm_period) pwm_cnt=0; // reset del periodo pwm
+           if(time_cnt1==time_set1) {         // cambio del duty cycle
+              time_cnt1=0;
+              hi_period++;                    // incrementa duty cycle
+              if(hi_period==pwm_period) hi_period=0;    //se il periodo hi raggiunge il periodo completo, torna a zero
+           }
+	}
+}
+
+void interrupt(){        // ISR
+   if(INTCON.TMR0IF) {   // con questo prescaler, entra circa ogni 8ms
+      pwm_cnt++;         // incrementa contatore del periodo del pwm
+      time_cnt1++;       // incrementa contatore del ciclo di cambio duty cycle
+      INTCON.TMR0IF=0;   // resettare i flag sempre alla fine del codice
+   }
+}
+```
+
+Se invece volessi usare entrambi i moduli PWM, avrei l'uscita su **RE2** e **RD1**. Ecco l'esempio che fa utilizzo dei **TIMER2/TIMER4** (**Nota**: posso anche associare due moduli PWM allo stesso timer)
+```Sh
+void main() {
+     unsigned short int dir=1;
+     //vedi pinout table nel datasheet per vedere a quale pin viene associato quale CCP
+     TRISE.RE2=1;  //DISATTIVO output per settare ccp5
+     TRISD.RD1=1;  //DISATTIVO output per settare ccp4
+     //----TMR2----
+     T2CON=0b00000100;
+     //      +++++-----postscaler (lascia sempre 0)
+     //            +----timer on   (sempre a 1 per accendere il timer)
+     //             ++--prescaler  (se c'è bisogno di cambio frequenza, cambiare prescaler)
+     PR2=255;   // periodo pwm
+     //----TMR4----
+     T4CON=0b00000110;
+     PR4=255;
+     //----CCP MODULES SETUP----
+     CCP4CON=  0B00001100;
+     //              ++----SETTARE QUESTI DUE PER PWM MODE, TUTTI GLI ALTRI BIT A ZERO
+     CCP5CON=0x0F; //settato bit0/1 HIGH perchè non vengono usati
+
+     //dobbiamo configurare quale timer abbiamo associato al nostro CCP. Setta timer2 in ccptmrs
+     CCPTMRS1= 0b00000001;   //associo timer2 a CCP55,  associo timer4 a CCP4
+
+     CCPR5L= 64; // un quarto di duty cycle
+     CCPR4L= 64; // un quarto di dyty cycle
+
+     TRISE.RE2=0;     //risetto i pin in uscita per attivare il pwm
+     TRISD.RD1=0;
+
+     while(1){ // fade in e out dei led
+       if(dir==0){
+         CCPR5L++;
+         CCPR4L++;
+       }
+       else {
+       CCPR5L--;
+       CCPR4L--;
+       }
+       if(CCPR5L==255) dir=1;
+       else if(CCPR5L==0) dir=0;
+       delay_ms(4);
+     }
+}
+```
 # PARTE SU ASSEMBLY  
 ## QUALI ISTRUZIONI AFFLIGGONO LO STATUS?
 - Tutte le operazioni di addizione (ADDWF ADDLW), sottrazione (SUBWF SUBLW) affliggono i bit C (carry) DC (digit carry) Z (Zero bit)
