@@ -8,7 +8,7 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 3. [APPUNTI LCD LEZIONE 2](#appunti-lcd-lezione-2)
 4. [APPUNTI LEZIONE 3 ( NOTA BENE PER ORALE )](#appunti-lezione-3-nota-bene-per-orale-)
 5. [APPUNTI SONAR (CCP) LEZIONE 4](#appunti-sonar-ccp-lezione-4)
-6. [APPUNTI ADC LEZIONE 6](#appunti-adc-lezione-6)
+6. [APPUNTI **ADC** LEZIONE 6](#appunti-**ADC**-lezione-6)
 7. [APPUNTI SUL PWM LEZIONE 7](#appunti-sul-pwm-lezione-7)
 8. [QUALI ISTRUZIONI AFFLIGGONO LO STATUS?](#quali-istruzioni-affliggono-lo-status)
 9. [COS’È LO STATUS?](#cos-lo-status)
@@ -19,21 +19,32 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 
 ## GPIO SETUP
 
-NB: pin settati in input per default. Quando si setta un digital out scrivere sempre LATx=0 per reset.
+NB: pin settati in Input per default. Quando si setta un digital out scrivere sempre LATx=0 per reset.
 
-Digital output tris=0
+**Digital Output** tris=0
 
-Digital input 		ansel=0 	tris=1. 	(ANSEL=0 -> Buffer digitali in ingresso accesi)
+**Digital Input** ansel=0 	tris=1. 	(ANSEL=0 -> Buffer digitali in ingresso accesi)
 
-Analog input 		ansel=1 	tris=1.
+**Analog Input** 		ansel=1 	tris=1.
 
-**NB**: se dei pin non vengono definitivamente utilizzati nel progetto, vengono settati come output e poi il **LAT viene impostato a 0**. Questo per prevenire cambi della porta che comportano consumo dovuto alla potenza dinamica di switching dell’ingresso.
+**NB**: se dei pin non vengono definitivamente utilizzati nel progetto, vengono settati come Output e poi il **LAT viene impostato a 0**. Questo per prevenire cambi della porta che comportano consumo dovuto alla potenza dinamica di switching dell’ingresso.
 Ogni port ha diversi registri:
 
-- **TRIS** (input=1/output=0, input di default al reset del uC),
+- **TRIS** (Input=1/Output=0, Input di default al reset del uC),
 - **PORT**
- (legge il livello logico sul pin fisico, non definito al reset, LAT (output latch HI=1, LOW=0, non definito al reset),
-- **ANSEL**(input analogico, 1 per spegnere il digital buffer, 0 per tenerlo acceso, tutto a 1 di default)
+ (legge il livello logico sul pin fisico, non definito al reset
+- **LAT** (Output latch HI=1, LOW=0, non definito al reset),
+- **ANSEL**(Input analogico, 1 per spegnere il digital buffer, 0 per tenerlo acceso, tutto a 1 di default)
+
+**USO PORT O LAT IN READ O WRITE?**
+- **WRITE**: **LATx** e **PORTx** effettuano la stessa identica operazione di scrittura
+- **READ**: **PORTx** rappresenta lo stato fisico del pin, mentre **LATx** rappresenta il registro che comanda il data latch.  
+
+**Quando avvengono casini?** Prendo per esempio **RB1** come digital Output. Faccio tutte le operazioni che mi pare con **PORTB.RB1** oppure **LATB.RB1** (non fa differenza).  
+Ora cambio **RB1** da digital Output a digital Input. Come risultato finale suppongo di avere **LATB.RB1=1**. Un bottone esterno impone ora il pin fisico con stato a 0. Se ora uso **PORTB.RB1**, leggo che effettivamente il pin è a zero. Se invece leggo LATB.RB1 mi ritrovo che il pin è a 1! Di conseguenza cosa devo usare?
+- **digital Input usare sempre e solo PORTB** in READ  
+- **digital Output** usare **PORTB** e **LATD** in WRITE a piacere
+
 
 **EASYPIC BOARD SETUP ( usi tipici delle PORTx )**
 - **PORTA**: usata per aggiungere pulsanti e per fare polling.
@@ -58,14 +69,9 @@ Successivamente tutto dipende dal **valore iniziale di TMR0L** perché altriment
 
 <code> **f_min = f_osc / ( 4 * 256 * ( 256 - TMR0L ) )** </code>
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space; f_{min}= \frac{f_{osc}}{4 * 256 * (256 - TMR0L) }    " title="\Large  f_{min}= \frac{f_{osc}}{4 * 256 * (256 - TMR0L) }" />
-
 Ovviamente la frequenza minima ottenibile tenendo conto di **TMR0L** . Il tempo di interrupt si ottiene semplicemente ribaltando la formula:  
 
 <code> **t_max = ( 4 * 256 * ( 256 - TMR0L ) ) / f_osc** </code>
-
-<img src="https://latex.codecogs.com/svg.latex?\Large&space; t_{max}= \frac{4 * 256 * (256 - TMR0L) }{f_{osc}}    " title="\Large  t_{max}= \frac{4 * 256 * (256 - TMR0L) }{f_{osc}}" />
-
 
 **4/32MHz = 1/8MHz che corrisponde a 125 ns. Questo è fisso, a meno di disabilitare il PLL**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente ma se volessi fare meglio hai 2 opzioni: la prima è salvare bene il valore del tempo di interrupt e/o sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler (Ho fatto il calcolo, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi)**. Come funziona la seconda soluzione? Il valore iniziale del TMR0L, ogni volta che c’è un overflow, si attiva un interrupt ed è lì che dovrei impostare il valore che voglio nel TMR0L. **Per Timer0 impostare registri T0CON e INTCON.**
 
@@ -121,6 +127,7 @@ Quando dichiariamo queste stringhe in C dobbiamo usare per forza quello che si c
 Riguardo all’LCD all’esame c'è il **file con la intestazione e la manipolazione base della stringhe**.
 
 ## APPUNTI LEZIONE 3 ( NOTA BENE PER ORALE )
+
 Vediamo come mai posso **rischiare di entrare due volte nella ISR dato un interrupt on change** .    
 Premo un bottone. Il valore logico di tensione che è fisicamente su PORTB hardware è 1 perché io sto premendo il bottone -> **XOR=1** -> scatta l'interrupT -> **RBIF=1**, il main si ferma ed entriamo in ISR.  
 Ora che siamo nella ISR **INTCON.RBIF==1** ? Sì, la flag è partita alla pressione del bottone.
@@ -147,12 +154,12 @@ INTCON.RBIF=0; //Reset della flag
 ```
 ## APPUNTI SONAR (CCP) LEZIONE 4
 Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da ricordare sono principalmente:  
-1.	Il sonar è collegato a **PORTC**. Se il sonar viene utilizzato in modalità **Pulse Width Output**, devo impostare **RC2 digital Input**  (ANSELC=0 TRISC=1); sennò uso **RC3** come **Analog Input** -> è necessario usare l’ADC.
+1.	Il sonar è collegato a **PORTC**. Se il sonar viene utilizzato in modalità **Pulse Width Output**, devo impostare **RC2 digital Input**  (ANSELC=0 TRISC=1); sennò uso **RC3** come **Analog Input** -> è necessario usare l’**ADC**.
 
 2.	Il sonar si appoggia al Timer **TXCON** change sovrascrive i dati nel registro del capture **CCPXCON** da 16 bit, suddiviso nei registri **CCPXH** e **CCPXL** (8 bit), high e low rispettivamente. I timer dispari vengono usati **Capture and Compare** mentre per i timer pari vengono usati per il **PWM**. Si imposta il timer con il registro **CCPTMRS0**.
 3.	È una periferica del uC, quindi per attivarne l’interrupt **INTCON.PEIE=1** (non dimenticare il general **INTCON.GIE=1**)
 4.	L’attivazione degli interrupt non è solo legata al registro **INTCON** ma anche ai registri **PIEX** e **PIRX**. Bisogna cercare il numero corretto del registro a cui sostituire la X. **Esistono cinque registri per gli interrupt**.
-5.	Se vuoi lo stream continuo dei dati imposta **LATC.RC6=1**, inoltre deve essere digital Output, quindi TRISC del bit 6 è sempre; Gli altri bit si possono mettere benissimo in modalità input, in particolare **RC2** o **RC3** (digial/analog)
+5.	Se vuoi lo stream continuo dei dati imposta **LATC.RC6=1**, inoltre deve essere digital Output, quindi TRISC del bit 6 è sempre; Gli altri bit si possono mettere benissimo in modalità Input, in particolare **RC2** o **RC3** (digial/analog)
 6.	Non dimenticare la routine di interrupt che è sempre identica:
 
 
@@ -200,40 +207,40 @@ Unità di misura del timer fosc/4, in tempo ogni colpo avviene ogni 125 ns (sape
 dt= timer*125ns
 In un microsecondo ci stanno circa 8 volte 125 nanosecondi. Usiamo adeguatamente lo shift per ottenere la misura corretta.
 
-## APPUNTI ADC LEZIONE 6
-**L’ADC funziona a 8 oppure 10 bit** .  
-I registri dell’ADC da settare sono **ADCON0 ADCON1 ADCON2** .  
+## APPUNTI **ADC** LEZIONE 6
+L’**ADC** funziona a 8 oppure 10 bit** .  
+I registri dell’**ADC** da settare sono **ADCON0 ADCON1 ADCON2** .  
 - **ADCON0** serve a determinare attraverso i bit da 6 a 2 il pin scelto del uC per la conversione.  
-In particolare se voglio lavorare con il sonar uso **RC3(AN15)** che corrisponde ad **01111**.  Inoltre il bit **ADCON0.ADC_GO_NOT_DONE** fa partire la conversione se alto. Quando la conversione è completata torna a zero. Il bit **ADCON0.ADON** abilita l'ADC e deve essere impostato a 1 per accenderlo.
+In particolare se voglio lavorare con il sonar uso **RC3(AN15)** che corrisponde ad **01111**.  Inoltre il bit **ADCON0.ADC_GO_NOT_DONE** fa partire la conversione se alto. Quando la conversione è completata torna a zero. Il bit **ADCON0.ADON** abilita l'**ADC** e deve essere impostato a 1 per accenderlo.
 
 - **ADCON1** è invece il registro delle alimentazioni. Noi di solito lo alimentiamo 0/+5V e quindi lo poniamo semplicemente tutto a 0.
 - **ADCON2** invece contiene il bit 7 che è legato alla giustificazione, ovvero, dove vengono salvati i bit più significativi e dove i meno significativi. Considera che abbiamo due registri **ADRESH** e **ADRESL** e che il massimo dei bit da salvare sarà 10.
 
-Se usiamo l'ADC ad 8 bit non è importante giustificare a destra o sinistra, basta copiare dal registro corretto (HIGH/LOW) il dato.  
+Se usiamo l'**ADC** ad 8 bit non è importante giustificare a destra o sinistra, basta copiare dal registro corretto (HIGH/LOW) il dato.  
 
 **Se invece lo voglio a 10 bit**, 2 bit saranno o nell’High o nel registro Low e viceversa, a seconda di come viene giustificato.  
 
-**I bit da 5 a 3** permettono di settare il tempo d’acquisizione (tempo di delay dopo che il condensatore del S&H viene bloccato). Nel caso venga settato a 0 appena viene settato il bit GO dell’ADC parte immediatamente la conversione, la cui lunghezza verrà data da Tad.  
+**I bit da 5 a 3** permettono di settare il tempo d’acquisizione (tempo di delay dopo che il condensatore del S&H viene bloccato). Nel caso venga settato a 0 appena viene settato il bit GO dell’**ADC** parte immediatamente la conversione, la cui lunghezza verrà data da Tad.  
 
 **NB: attenzione che se l’acquisition time è zero e Tad troppo corto, la conversione non andrà a buon fine**. Quindi è sconsigliatissimo tenere l’acquisition time a zero.  
 Di solito si piazza ad un valore che superi almeno 7us quindi se ho un Tad di 1us posso settare l’acquisition time a **16Tad**, sul datasheet dice che servono almeno **11Tad per avere una conversione riuscita**.
 
-Seleziona il prescaler di fosc per il modulo ADC e, come conseguenza setta la durata di 1 Tad (si può usare anche un clock di un oscillatore dedicato FRC che va a 600Khz.  
+Seleziona il prescaler di fosc per il modulo **ADC** e, come conseguenza setta la durata di 1 Tad (si può usare anche un clock di un oscillatore dedicato FRC che va a 600Khz.  
 
 **NB:** Tacqt è il tempo in cui il S&H è ancora agganciato al pin del PIC e quindi il condensatore  è ancora libero di caricarsi prima che intervenga Tad per iniziare l’acquisizione del valore.
 
 **NB:** ricorda di configurare bene i **PORT** con **ANSELx=1** e **TRISx=1**
 
-**NB:** potrei anche tenere il buffer input digitale acceso con **ANSEL=0** però consumerebbe potenza a caso, la conversione avviene correttamente a priori).
+**NB:** potrei anche tenere il buffer Input digitale acceso con **ANSEL=0** però consumerebbe potenza a caso, la conversione avviene correttamente a priori).
 
 **NB: ADIF** è settato alla fine di ogni conversione a prescindere dall’interrupt abilitato o no
 
-**NB:** il **ADC_GO_NOT_DONE** non deve essere messo nella stessa istruzione in cui viene acceso l’ADC.
+**NB:** il **ADC_GO_NOT_DONE** non deve essere messo nella stessa istruzione in cui viene acceso l’**ADC**.
 
 ## APPUNTI SUL PWM LEZIONE 7
 Il **PWM** è un modulo che permette di generare un’onda quadra con duty cycle variabile. Viene spesso usato per alimentare a diverse potenze un carico.
 **Il PWM ha due comparatori HIGH/LOW** .  
-Il comparatore sotto setta l’output, mentre il comparatore sopra lo resetta.
+Il comparatore sotto setta l’Output, mentre il comparatore sopra lo resetta.
 
 Un problema costruttivo di questa scheda è legato al fatto che **abbiamo un PIC che lavora ad 8 bit ma abbiamo un pwm che formalmente lavora a 10** . Come è possibile?  
 Sono riusciti ad ottenere 1024 valori di quantizzazione possibile in questa maniera: Se il registro **CCPRxH**  è da **8 bit, i due bit mancanti per renderlo da dieci bit vengono presi dai bit meno significativi di un altro registro e vengono affiancati nella parte meno significativa del nostro registro** .  
