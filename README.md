@@ -8,14 +8,15 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 3. [APPUNTI LCD LEZIONE 2](#appunti-lcd-lezione-2)
 4. [APPUNTI LEZIONE 3 ( NOTA BENE PER ORALE )](#appunti-lezione-3-nota-bene-per-orale-)
 5. [APPUNTI SONAR (CCP) LEZIONE 4](#appunti-sonar-ccp-lezione-4)
-6. [APPUNTI ADC LEZIONE 6](#appunti-ADC-lezione-6)
+6. [APPUNTI ADC LEZIONE 6](#appunti-adc-lezione-6)
 7. [APPUNTI SUL PWM LEZIONE 7](#appunti-sul-pwm-lezione-7)
-8. [QUALI ISTRUZIONI AFFLIGGONO LO STATUS?](#quali-istruzioni-affliggono-lo-status)
-9. [COS’È LO STATUS?](#cos-lo-status)
-10. [SPIEGAZIONE ALCUNE ISTRUZIONI ASM (RIVEDERE GOTO E BRA CON PIC16 PIC18)](#spiegazione-alcune-istruzioni-asm-rivedere-goto-e-bra-con-pic16-pic18)
-11. [DIRETTIVE ASM](#direttive-asm)
+8. [ASSEMBLY](#assembly)
+	1. [COS’È LO STATUS?](#cos-lo-status)
+	2. [QUALI ISTRUZIONI AFFLIGGONO LO STATUS?](#quali-istruzioni-affliggono-lo-status)
+	3. [SPIEGAZIONE ALCUNE ISTRUZIONI ASM (RIVEDERE GOTO E BRA CON PIC16 PIC18)](#spiegazione-alcune-istruzioni-asm-rivedere-goto-e-bra-con-pic16-pic18)
+	4. [DIRETTIVE ASM](#direttive-asm)
+		1. [DIFFERENZE TRA PSEUDO-ISTRUZIONI, MACRO, DIRETTIVE](#differenze-tra-pseudo-istruzioni-macro-direttive)
 
-<!-- /TOC -->
 
 ## GPIO SETUP
 
