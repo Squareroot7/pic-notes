@@ -55,7 +55,7 @@ Ora cambio **RB1** da digital Output a digital Input. Come risultato finale supp
 
 ## APPUNTI TIMER0 LEZIONE 2
 Il TIMER0 è per definizione un contatore che subisce un overflow dopo un tempo definito dall'utente attraverso setup dei registri dedicati.
-Si parte da un oscillatore esterno o interno. Mediante un multiplexer possiamo la frequenza di incremento del contatore. **la nostra frequenza tipica è Fosc/4 in cui, grazie al PLL, Fosc è 32MHz (8MHz di default)**.
+Si parte da un oscillatore esterno o interno. Mediante un multiplexer possiamo selezionare la frequenza di incremento del contatore. **la nostra frequenza tipica è Fosc/4 in cui, grazie al PLL, Fosc è 32MHz (8MHz di default)**.
 
 **T0CKI** pin non lo useremo mai, è il pin per comunicare con l'esterno che se abilitato come sorgente fornisce un impulso edge sensitive in base alla impostazione selezionata con T0SE (variazione sul rising/falling edge).
 
@@ -89,7 +89,7 @@ Attenzione anche allo switch pin 6 (dallo schema e che dovrebbe essere già sett
 **Rimangono liberi B6 e B7**. Se abbiamo il display collegato da B0 a B5 non possono essere usati per altro se non per l’LCD. L’IOCB era dal B7 al B4. Ma se abbiamo intenzione di usare come In Circuit Debugger, **quindi se vogliamo usare il debugger per capire cosa non va nel nostro programma, anche B6 e B7 risulteranno fuori uso**. Per questo motivo l’IOCB non lo useremo più dai prossimi laboratori, ma ci concentreremo sulle altre porte, precisamente sul quando ci sarà una transazione di stato su qualunque pin.  
 
 C’è una parte di codice fissa da impostare se vuoi accendere l’LCD:
-```Sh
+```cpp
 // Lcd module connections
 sbit LCD_RS at LATB4_bit;
 sbit LCD_EN at LATB5_bit;
@@ -111,11 +111,12 @@ void main(){
   Lcd_init();
   Lcd_Cmd(_LCD_CLEAR);
   Lcd_Cmd(_LCD_CURSOR_OFF);
-  //.
+  //
   //main code and while(1);
-  //.
+  //
 }
 ```
+
 **NB**: ricordati di attivare la libreria LCD e la parte di conversione delle char nell sezione delle librerie nell'IDE MikroC.
 
 In particolare il comando principale è **Lcd_Out(riga, colonna, “cosa vuoi scrivere”)**. Attenzione che **le stringhe in C sono un semplice array di char**, quindi una volta dichiarata la dimensione, quella è, non modificabile in runtime.  
@@ -135,25 +136,29 @@ Ora che siamo nella ISR **INTCON.RBIF==1** ? Sì, la flag è partita alla pressi
 Se ora resetto subito la flag ma non faccio nessuna lettura della **PORTB**, la **XOR** è ancora a 1, il PIC rialza la flag: questo perché la Q del flip flop non è stata cambiata (non ho letto niente ancora), è ancora 0, ma su **PORTB** il pulsante è ancora premuto quindi c’è un mismatch e l’uscita dello XOR è ancora 1. Ma quindi, dato che la flag è ancora alta, appena esco dal primo ISR rientro subito ed eseguo ISR una seconda volta, tutto questo mentre io sto ancora premendo il pulsante. Ancora una volta INTCON.RBIF==1, resetto la flag alla prima riga della ISR ma la seconda volta non è più vero che c’è il mismatch perché l’uscita del flip flop è stata aggiornata dalla ISR precedente (abbiamo fatto una read sulla PORTB tramite la condizione if (PORTB.RB6) appena dopo aver buttato giù la flag). L’uscita della XOR ora è a 0 e non rientrerò più nel ISR.
 Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORTB mi frego e rientro due volte nella stessa ISR ad ogni pressione del pulsante dell’interrupt on change.
 
-```Sh
-// ******ISR SCORRETTO******
-void interrupt(){
-if(INTCON.REIF){ //flag alzata da PORTB
-INTCON.RBIF=0; //Reset della flag
-// a questo punto accade il mismatch
-// non ho aggiornato PORTB prima di buttare giù la flag
-if(PORTB.RB6)} i++; // leggo PORTB quindi alla isr dopo
-if(PORTB.RB) i--; // avrò aggiornato il flip flop
+```cpp
+  // ******ISR SCORRETTO******
+  void interrupt(){
+    if(INTCON.REIF){ //flag alzata da PORTB
+    INTCON.RBIF=0; //Reset della flag
+    // a questo punto accade il mismatch
+    // non ho aggiornato PORTB prima di buttare giù la flag
+    if(PORTB.RB6)} i++; // leggo PORTB quindi alla isr dopo
+    if(PORTB.RB) i--; // avrò aggiornato il flip flop
+  }
 
-// ******ISR CORRETTO******
-void interrupt(){
-if(INTCON.REIF){ // flag alzata da PORTB
-if(PORTB.RB6)} i++; // leggo PORTB ->Flip Flop aggiornato!
-if(PORTB.RB) i--; // altro refresh di PORTB
-INTCON.RBIF=0; //Reset della flag
-// a questo punto ho PORTB refreshato -> NO mismatch
-// non entro nella ISR una seconda volta  
+  // ******ISR CORRETTO******
+  void interrupt(){
+    if(INTCON.REIF){ // flag alzata da PORTB
+    if(PORTB.RB6)} i++; // leggo PORTB ->Flip Flop aggiornato!
+    if(PORTB.RB) i--; // altro refresh di PORTB
+    INTCON.RBIF=0; //Reset della flag
+    // a questo punto ho PORTB refreshato -> NO mismatch
+    // non entro nella ISR una seconda volta  
+  }
 ```
+
+
 ## APPUNTI SONAR (CCP) LEZIONE 4
 Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da ricordare sono principalmente:  
 1.	Il sonar è collegato a **PORTC**. Se il sonar viene utilizzato in modalità **Pulse Width Output**, devo impostare **RC2 digital Input**  (ANSELC=0 TRISC=1); sennò uso **RC3** come **Analog Input** -> è necessario usare l’**ADC**.
@@ -165,7 +170,7 @@ Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da
 6.	Non dimenticare la routine di interrupt che è sempre identica:
 
 
-```Sh
+```cpp
 if(PIR1.CCP1IF){
   if(CCP1CON.CCP1M0){	          // If we are sensing the Rising-Edge
     ta = ( CCPR1H << 8 ) + CCPR1L; // merge 8 and 8 bit in 16 bit
@@ -209,9 +214,9 @@ Unità di misura del timer fosc/4, in tempo ogni colpo avviene ogni 125 ns (sape
 dt= timer*125ns
 In un microsecondo ci stanno circa 8 volte 125 nanosecondi. Usiamo adeguatamente lo shift per ottenere la misura corretta.
 
-**Vediamo ora un esempio** dell'utilizzo del Sonar con l'LDC:
+**Vediamo ora un esempio** dell'utilizzo del Sonar con l'LCD:
 
-```Sh
+```cpp
 // Lcd module connections
 sbit LCD_RS at LATB4_bit;
 sbit LCD_EN at LATB5_bit;
@@ -321,7 +326,7 @@ Seleziona il prescaler di fosc per il modulo **ADC** e, come conseguenza setta l
 
 Esempio di configurazione dell'**ADC**:
 
-```Sh
+```cpp
 // set TRIS here if needed
 ANSELC = 0b00001000;    //RC3 --> AN15
 ADCON2 = 0b10101110;
@@ -374,7 +379,7 @@ Vado ora a definire il duty cycle
 <code>duty cycle=CCPL/PRx </code> (in cui PRx è un registro a 8 bit)
 
 Per il PWM ho solo due moduli CCP (4/5) che ne permettono l'utilizzo. Come posso sviare da questo? Mi costruisco un **PWM software** utilizzabile su praticamente qualsiasi pin del uC, come nell'esempio seguente:
-```Sh
+```cpp
 unsigned short int pwm_cnt=0;
 unsigned int time_cnt1=0, time_set1 = 100;
 void main() {  
@@ -406,7 +411,7 @@ void interrupt(){        // ISR
 ```
 
 Se invece volessi usare entrambi i moduli PWM, avrei l'uscita su **RE2** e **RD1**. Ecco l'esempio che fa utilizzo dei **TIMER2/TIMER4** (**Nota**: posso anche associare due moduli PWM allo stesso timer)
-```Sh
+```cpp
 void main() {
      unsigned short int dir=1;
      //vedi pinout table nel datasheet per vedere a quale pin viene associato quale CCP
@@ -450,8 +455,14 @@ void main() {
      }
 }
 ```
-# PARTE SU ASSEMBLY  
-## QUALI ISTRUZIONI AFFLIGGONO LO STATUS?
+
+## ASSEMBLY  
+
+
+### COS’È LO STATUS?
+Lo STATUS è uno dei registri più importanti del microcontrollore. Esso contiene dei bit legati alle operazioni effettuate dall’ALU, il bit dello stato di RESET e i bit del controllo del paging dei banchi di memoria.
+
+### QUALI ISTRUZIONI AFFLIGGONO LO STATUS?
 - Tutte le operazioni di addizione (ADDWF ADDLW), sottrazione (SUBWF SUBLW) affliggono i bit C (carry) DC (digit carry) Z (Zero bit)
 - Le rotate left e rotate right (RLF RRF) affliggono il bit C (carry) perché ho bisogno di 1 bit da salvare da qualche parte mentre sto shiftando
 
@@ -459,27 +470,23 @@ void main() {
 - Le operazioni logiche ANDWF CLEARF CLEARW COMF IORWF MOVF XORWF ANDLW IORLW  XORLW affliggono il bit Z
 - Tutte le operazioni rimanenti non affliggono lo status (esempio lo swap dei nibbles)
 
-## COS’È LO STATUS?
-Lo STATUS è uno dei registri più importanti del microcontrollore. Esso contiene dei bit legati alle operazioni effettuate dall’ALU, il bit dello stato di RESET e i bit del controllo del paging dei banchi di memoria.
 
 
-
-## SPIEGAZIONE ALCUNE ISTRUZIONI ASM (RIVEDERE GOTO E BRA CON PIC16 PIC18)
+### SPIEGAZIONE ALCUNE ISTRUZIONI ASM (RIVEDERE GOTO E BRA CON PIC16 PIC18)
 GOTO XXX: aggiorna il PC ad un’etichetta designata. La dimensione dell’indirizzo dell’etichetta è di 11 bit È sensibile al paging, infatti il bit 12 e 13 vengono acchiappati da PCLATH. Quindi usare BANKSEL. Nei PIC18 il PC è a 21 bit assoluti, il goto è a 20bit quindi può spostarti ovunque in 2M di memoria (in due cicli), ma c’è il problema del paging con PCLATU (non più H)
 BRA XXX: è un salto (un po’ come il goto) relativo all’istruzione di partenza. Posso spostarmi di massimo +-1023 posizioni dall’indirizzo di partenza. Essendo un salto condizionale partendo dal valore del PC corrente, non è affetto dal paging (non è disponibile nei PIC16).
 RETFIE: specifica il return dall’interrupt (quindi sposta quello che c’era nel Top Of Stack nel PC) e riattiva il general interrupt GIE (che è stato disattivato all’ingresso della routine dell’interrupt).
 CALL: va all’etichetta, esattamente come il goto, quindi è affetto da paging (USARE BANKSEL). Si salva nello stack il PC corrispondente alla posizione di chiamata. Appena la routine chiamata dal CALL, il PC viene rishiftato al chiamante.
 
 
-## DIRETTIVE ASM
-#include: tale e quale a C++. Si usa con #include <p18f452.inc>
+### DIRETTIVE ASM
+- **`\#include`**: tale e quale a C++. Si usa con #include <p18f452.inc>
 UDATA: dichiara l’inizio di una sezione di dati non inizializzati. Per riservare lo spazio in questa sezione bisogna utilizzare la direttiva RES. L’utilizzo è “LABEL res #byte”.Se non vengono specificate label e indirizzo, (es VARIABLES_IN_BANK udata 0x20) si scrive .udata e il linker fa tutto da sé.
-BANKSEL XXX: Serve per selezionare automaticamente il bank in base all’etichetta desiderata. Quindi se voglio selezionare un TRISB e non so dove sono, scrivo BANKSEL TRISB. Questo mi permette di poter mettere (con le dovute precauzioni della scelta del micro) lo stesso codice su un altro micro senza preoccuparmi del Bank da selezionare.
-CODE XXXX : (indirizzo opzionale) significa che il linker può piazzare il codice nella program memory all’indirizzo specifico XXXX segnalato dall’utente, oppure viene lasciata libera la scelta dell’indirizzo al linker se XXXX non viene specificato.
-END: specifica all’assembler che questa è la fine del file asm. Ogni file asm deve necessariamente finire con la direttiva END. Se così non fosse, l’assembler continuerebbe a passare tutta la memoria.
-equ: analogo del define del c++. Si scrive come “PORTCACCA equ PORTD” (etichetta eq nome_indirizzo_in_RAM).
-DIFFERENZE TRA PSEUDO-ISTRUZIONI, MACRO, DIRETTIVE
-Direttiva: una direttiva assembler è un comando utilizzato a livello software che compare nel source code ma non è direttamente traducibile come opcode. Di conseguenza una direttiva non compare nell’instruction set del datasheet del PIC ma nella User’s guide del MPASM™ Assembler.
-Pseudo-istruzione: istruzione ASM scritta con parole diverse in modo tale da agevolare la memorizzazione. Per esempio, nel PIC16 , c’è MOVWF, mentre la sua “complementare” dovrebbe essere MOVFW. Nelle istruzioni del datasheet però esiste solo MOVF, w.
-L’assemblatore via software permette di tradurre direttamente MOVF,w tramite la pseudo-istruzione MOVFW, in modo tale da avere meno confusione nel codice e migliore memorizzazione.
-Macro: può essere considerata come “un’istruzione” a livello di sviluppo software, ma in realtà è una routine di istruzioni unificate sotto un unico nome. A differenza delle funzioni in linguaggio C, la macro è una sostituzione in-line. Questo significa che non viene effettuata una call, non viene cambiato il PC, non viene allocato spazio nello stack. Il contenuto della macro viene semplicemente inserito in quel punto del programma. Per l’utilizzo leggi la User’s guide del MPASM™ Assembler.
+- **`BANKSEL XXX`**: Serve per selezionare automaticamente il bank in base all’etichetta desiderata. Quindi se voglio selezionare un TRISB e non so dove sono, scrivo BANKSEL TRISB. Questo mi permette di poter mettere (con le dovute precauzioni della scelta del micro) lo stesso codice su un altro micro senza preoccuparmi del Bank da selezionare.
+- **`CODE XXXX`**: (indirizzo opzionale) significa che il linker può piazzare il codice nella program memory all’indirizzo specifico XXXX segnalato dall’utente, oppure viene lasciata libera la scelta dell’indirizzo al linker se XXXX non viene specificato.
+- **`END`**: specifica all’assembler che questa è la fine del file asm. Ogni file asm deve necessariamente finire con la direttiva END. Se così non fosse, l’assembler continuerebbe a passare tutta la memoria.
+equ: analogo del define del c++. Si scrive come “MYPORT equ PORTD” (etichetta eq nome_indirizzo_in_RAM).
+#### DIFFERENZE TRA PSEUDO-ISTRUZIONI, MACRO, DIRETTIVE
+- **Direttiva**: una direttiva assembler è un comando utilizzato a livello software che compare nel source code ma non è direttamente traducibile come opcode. Di conseguenza una direttiva non compare nell’instruction set del datasheet del PIC ma nella User’s guide del MPASM™ Assembler.
+- **Pseudo-istruzione**: istruzione ASM scritta con parole diverse in modo tale da agevolare la memorizzazione. Per esempio, nel PIC16 , c’è `MOVWF`, mentre la sua “complementare” dovrebbe essere `MOVFW`. Nelle istruzioni del datasheet però esiste solo `MOVF, w`. L’assemblatore via software permette di tradurre direttamente `MOVF,w` tramite la pseudo-istruzione `MOVFW`, in modo tale da avere meno confusione nel codice e migliore memorizzazione.
+- **Macro**: può essere considerata come “un’istruzione” a livello di sviluppo software, ma in realtà è **un gruppo di istruzioni unificate sotto un unico nome**. A differenza delle funzioni in linguaggio C, la macro è una sostituzione **in-line**. Questo significa che non viene effettuata una call, non viene cambiato il PC, non viene allocato spazio nello stack. Il contenuto della macro viene semplicemente inserito in quel punto del programma. Per l’utilizzo leggi la User’s guide del MPASM™ Assembler.
