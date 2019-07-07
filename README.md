@@ -4,6 +4,8 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:1 -->
 
 1. [Lezione 1 - GPIO](#lezione-1-gpio)
+			NaN. [USO PORT O LAT IN READ O WRITE?](#uso-port-o-lat-in-read-o-write)
+			NaN. [EASYPIC BOARD SETUP ( usi tipici delle PORTx )](#easypic-board-setup-usi-tipici-delle-portx-)
 2. [Lezione 2 - Timer 0](#lezione-2-timer-0)
 3. [Lezione 2 - LCD](#lezione-2-lcd)
 4. [Lezione 3 - Interrupts](#lezione-3-interrupts)
@@ -41,7 +43,7 @@ Ogni port ha diversi registri:
 | ANSELx   | 0 = Digital buffer **ON** | 1 = Digital buffer **OFF** | Digital buffer **OFF** |
 
 
-**USO PORT O LAT IN READ O WRITE?**
+##### USO PORT O LAT IN READ O WRITE?
 - **WRITE**: **LATx** e **PORTx** effettuano la stessa identica operazione di scrittura
 - **READ**: **PORTx** rappresenta lo stato fisico del pin, mentre **LATx** rappresenta il registro che comanda il data latch.  
 
@@ -51,7 +53,7 @@ Ora cambio **RB1** da digital Output a digital Input. Come risultato finale supp
 - **digital Output** usare **PORTB** e **LATD** in WRITE a piacere
 
 
-**EASYPIC BOARD SETUP ( usi tipici delle PORTx )**
+##### EASYPIC BOARD SETUP ( usi tipici delle PORTx )
 - **PORTA**: usata per aggiungere pulsanti e per fare polling.
 - **PORTB**: quasi interamente dedicata al LCD, attenzione che potrebbero venire usati RB6 e RB7 come pulsanti per interrupt on change (IOCB). **NB**: RB6 e RB7 vanno fuori uso con il debugger ON.
 - **PORTC**: poco spesso usata per altri scopi se non per il modulo sonar.
