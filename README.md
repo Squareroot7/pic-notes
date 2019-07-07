@@ -75,6 +75,48 @@ Ovviamente la frequenza minima ottenibile tenendo conto di **TMR0L** . Il tempo 
 
 **4/32MHz = 1/8MHz che corrisponde a 125 ns. Questo è fisso, a meno di disabilitare il PLL**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente ma se volessi fare meglio hai 2 opzioni: la prima è salvare bene il valore del tempo di interrupt e/o sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler (Ho fatto il calcolo, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi)**. Come funziona la seconda soluzione? Il valore iniziale del TMR0L, ogni volta che c’è un overflow, si attiva un interrupt ed è lì che dovrei impostare il valore che voglio nel TMR0L. **Per Timer0 impostare registri T0CON e INTCON.**
 
+
+## TIMER1 a 16Bit vs 2*8  
+**NB:** solo i timer pari possono essere a 8 bit.  
+Detto ciò notiamo immediatamente che all' interno del registro TxCON è presente un bit (TxRD16) che parla di **modalità 16bit o 2x8**.  
+
+È possibile usare **TMR** dispari a 8 bit, ma **è necessario o precaricare il byte alto a FF per avere interrupt corretti, o usare solo il byte alto tenendo conto del prescaling fatto da L di 256.**
+
+**Modalità 2x8**  
+Questa è la modalità più semplice per usare il timer, **TMRx** è semplicemente diviso in **TMrxH** e **TMRxL**, la lettura chiaramente viene fatta un bit alla vota e il byte flag di interrupt viene alzato all' overflow di **TMRxH**  
+
+Questa modalità però **presenta dei problemi sostaziali**, che potrebbero portare a errori nel programma.
+
+Facciamo un esempio: immaginiamo **TMR1** acceso, **TMR1L=0xFF TMR1H=0x00**  
+Procediamo con la lettura di **TMR1L**, salviamo il dato in una variabile, risultato sarà pari a **0x00FF** ( a 16Bit)
+A questo punto leggiamo il Byte alto, ma il timer non è stato spento, ed è andato avanti nel conteggio: **MR1L=0x00 TMR1H=0x01**
+Il programma procede a leggere il Byte successivo e il risultato sarà pari a
+
+<code>**0x00FF + 0x0100 = 0x01FF** </code>
+
+diverso sostanzialmente da 0x00FF che avremmo dovuto ottenere.
+
+**Facciamo un esempio di lettura nell' altro senso:**
+1. TMR1=0x00FF
+2. leggo TMR1H -> Res sarà 0x0000;
+3. il timer conta -> TMR1= 0x0100;
+4. Leggo TMR1L -> Res sarà 0x0000; =/= 0x00FF che ci aspettavamo.
+
+**Quando allora questa modalità è utile?**
+-	Quando non ci interessa il contenuto del timer ma solo l'overflow
+-	Quando ci interessa un solo byte del timer che sia H o L ( utile ad esempio in un **PWM software**, vedi gli appunti più avanti)
+
+Per correggere questo problema è stato introdotta l'altra modalità
+**1x16**
+La modalità che chiameremo **1x16** viene chiamata ufficialmente **16Bit** read/Write e quello che fa di fatto è **introdurre un buffer su TMR1H:**
+Il byte alto del timer a questo punto **on sarà più direttamente controllabile o leggibile**( lo chiameremo **TMR1H**), ma potremo accedere solamente al buffer( di fatto il PIC sposta fisicamente l'idirizzo, quindi a livello di codice noi accediamo lo stesso registro)
+**Il buffer viene copiato** quando viene toccato **TMR1L**:
+-	Leggo **TMR1L** -> **contemporaneamente TMR1H** verrà copiato in **TMR1H**, in questo modo il dato è salvato in sincronia, e anche se viene letto successivamente il conteggio del timer non lo influisce.
+-	Scrivo **TMR1H** -> nello stesso istante viene copiato **TMR1H** in **TMR1H**, il caricamento del valore iniziale viene fatto in sincronia e non c'è rischio di problemi in caricamento.
+
+**Problemi relativi a questo:**
+-	Se devo accedere solo a **TMR1H** Devo per forza leggere **TMR1L**, perdendo di fatto tempo.
+-	Se dovessi sbagliare l'ordine di lettura/scrittura otterrei dati/funzionamento non valido.
 ## APPUNTI LCD LEZIONE 2
 
 **Lo schermo LCD è composto da due righe e 16 colonne** .  
