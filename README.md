@@ -23,20 +23,23 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 
 NB: pin settati in Input per default. Quando si setta un digital out scrivere sempre LATx=0 per reset.
 
-**Digital Output** tris=0
+| Uso         | TRIS          | ANSEL          |
+|:------------|:--------------|:---------------|
+| Digital Out | TRISx.pin = 0 | dontcare       |
+| Digital In  | TRISx.pin = 1 | ANSELx.pin = 0 |
+| Analog In   | TRISx.pin = 1 | ANSELx.pin = 1 |
 
-**Digital Input** ansel=0 	tris=1. 	(ANSEL=0 -> Buffer digitali in ingresso accesi)
-
-**Analog Input** 		ansel=1 	tris=1.
 
 **NB**: se dei pin non vengono definitivamente utilizzati nel progetto, vengono settati come Output e poi il **LAT viene impostato a 0**. Questo per prevenire cambi della porta che comportano consumo dovuto alla potenza dinamica di switching dell’ingresso.
 Ogni port ha diversi registri:
 
-- **TRIS** (Input=1/Output=0, Input di default al reset del uC),
-- **PORT**
- (legge il livello logico sul pin fisico, non definito al reset
-- **LAT** (Output latch HI=1, LOW=0, non definito al reset),
-- **ANSEL**(Input analogico, 1 per spegnere il digital buffer, 0 per tenerlo acceso, tutto a 1 di default)
+| Registro | 0 =                       | 1 =                        | Al reset               |
+|:---------|:--------------------------|:---------------------------|:-----------------------|
+| TRISx    | 0 = Output                | 1 = Input                  | Input                  |
+| PORTx    | 0 = Reading low           | 1 = Reading high           | Undefined              |
+| LATx     | 0 = Writing low           | 1 = Writing high           | Undefined              |
+| ANSELx   | 0 = Digital buffer **ON** | 1 = Digital buffer **OFF** | Digital buffer **OFF** |
+
 
 **USO PORT O LAT IN READ O WRITE?**
 - **WRITE**: **LATx** e **PORTx** effettuano la stessa identica operazione di scrittura
