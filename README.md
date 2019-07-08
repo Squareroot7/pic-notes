@@ -1,4 +1,4 @@
-# pic-notes
+﻿# pic-notes
 Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:1 -->
@@ -54,11 +54,11 @@ Ora cambio **RB1** da digital Output a digital Input. Come risultato finale supp
 
 
 ##### EASYPIC BOARD SETUP ( usi tipici delle PORTx )
-- **PORTA**: usata per aggiungere pulsanti e per fare polling.
-- **PORTB**: quasi interamente dedicata al LCD, attenzione che potrebbero venire usati RB6 e RB7 come pulsanti per interrupt on change (IOCB). **NB**: RB6 e RB7 vanno fuori uso con il debugger ON.
+- **PORTA**: usata per aggiungere pulsanti e per fare polling. RA7-RA7 Connesse all'oscillatore.
+- **PORTB**: quasi interamente dedicata al LCD, attenzione che potrebbero venire usati RB6 e RB7 come pulsanti per interrupt on change (IOCB), IOCB disponibile da RB7-RB4, LCD connesso da RB5-RB0. **NB**: RB6 e RB7 vanno fuori uso con il debugger ON.
 - **PORTC**: poco spesso usata per altri scopi se non per il modulo sonar.
-- **PORTD**: spesso usata per operazioni con i led (tutta la porta).
-- **PORTE**: usata per un PWM, PWM software o per dei led di segnalazione
+- **PORTD**: spesso usata per operazioni con i led (tutta la porta). RD1 PWM.
+- **PORTE**: usata per un PWM, PWM software o per dei led di segnalazione. RE2 PWM, RE3 MCRL.
 
 ## Lezione 2 - Timer 0
 Il TIMER0 è per definizione un contatore che subisce un overflow dopo un tempo definito dall'utente attraverso setup dei registri dedicati.
@@ -68,7 +68,7 @@ Si parte da un oscillatore esterno o interno. Mediante un multiplexer possiamo s
 
 Successivamente alla selezione della sorgente c'è la scelta del sì o no prescaler, **il prescaler è un divisore di frequenza**. Il modo più facile per creare un prescaler è fare un contatore. All'interno del prescaler c'è quindi un contatore che quando supera una certa soglia dà in uscita un altro impulso. Questo prescaler può essere settato solo a potenze di 2 da 4 a 256 (massimo prescaler-> massimo tempo-> minima frequenza).
 
-Ultima selezione, tralascando il sync clock, che dice semplicemente che devono passare due colpi di clock per aggiornare il timer, abbiamo il registro **TMR0L (registro low del timer 0)**. È un registro a 8 bit, i meno significativi del nostro registro di timer. **Questo registro è un altro contatore che setta la flag dell'interrupt TMR0IF quando va in overflow**. Se disabilito l’interrupt posso usarlo anche solo come contatore. **Il registro principale per configurare è T0CON**.
+Ultima selezione, tralasciando il sync clock, che dice semplicemente che devono passare due colpi di clock per aggiornare il timer, abbiamo il registro **TMR0L (registro low del timer 0)**. È un registro a 8 bit, i meno significativi del nostro registro di timer. **Questo registro è un altro contatore che setta la flag dell'interrupt TMR0IF quando va in overflow**. Se disabilito l’interrupt posso usarlo anche solo come contatore. **Il registro principale per configurare è T0CON**.
 
 Con il TIMER0 quindi usiamo il suo l’interrupt per temporizzare e salviamo o incrementiamo la variabile di conta ad ogni interrupt.  
 Per la precisione la **frequenza di interrupt è frequenza d’ingresso (Fosc/4) diviso il prescaler che va da non attivo a 256** .  
@@ -80,7 +80,7 @@ Ovviamente la frequenza minima ottenibile tenendo conto di **TMR0L** . Il tempo 
 
 <code> **t_max = ( 4 * 256 * ( 256 - TMR0L ) ) / f_osc** </code>
 
-**4/32MHz = 1/8MHz che corrisponde a 125 ns. Questo è fisso, a meno di disabilitare il PLL**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente ma se volessi fare meglio hai 2 opzioni: la prima è salvare bene il valore del tempo di interrupt e/o sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler (Ho fatto il calcolo, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi)**. Come funziona la seconda soluzione? Il valore iniziale del TMR0L, ogni volta che c’è un overflow, si attiva un interrupt ed è lì che dovrei impostare il valore che voglio nel TMR0L. **Per Timer0 impostare registri T0CON e INTCON.**
+**4/32MHz = 1/8MHz che corrisponde a 125 ns. Questo è fisso, a meno di disabilitare il PLL**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente ma se volessi fare meglio hai 2 opzioni: la prima è salvare bene il valore del tempo di interrupt utilizzando un long int e tenendo per esempio in conto che ogni interrupt è 8192, e/o sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler (Ho fatto il calcolo, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi)**. Come funziona la seconda soluzione? Il valore iniziale del TMR0L, ogni volta che c’è un overflow, si attiva un interrupt ed è lì che dovrei impostare il valore che voglio nel TMR0L. **Per Timer0 impostare registri T0CON e INTCON.**
 
 
 ## Lezione 2 - TIMER1 modalità 16Bit vs 2*8  
@@ -92,7 +92,7 @@ Detto ciò notiamo immediatamente che all' interno del registro TxCON è present
 **Modalità 2x8**  
 Questa è la modalità più semplice per usare il timer, **TMRx** è semplicemente diviso in **TMrxH** e **TMRxL**, la lettura chiaramente viene fatta un bit alla vota e il byte flag di interrupt viene alzato all' overflow di **TMRxH**  
 
-Questa modalità però **presenta dei problemi sostaziali**, che potrebbero portare a errori nel programma.
+Questa modalità però **presenta dei problemi sostanziali**, che potrebbero portare a errori nel programma.
 
 Facciamo un esempio: immaginiamo **TMR1** acceso, **TMR1L=0xFF TMR1H=0x00**  
 Procediamo con la lettura di **TMR1L**, salviamo il dato in una variabile, risultato sarà pari a **0x00FF** ( a 16Bit)
@@ -114,9 +114,9 @@ diverso sostanzialmente da 0x00FF che avremmo dovuto ottenere.
 -	Quando ci interessa un solo byte del timer che sia H o L ( utile ad esempio in un **PWM software**, vedi gli appunti più avanti)
 
 Per correggere questo problema è stato introdotta l'altra modalità
-**1x16**
+**1x16**.
 La modalità che chiameremo **1x16** viene chiamata ufficialmente **16Bit** read/Write e quello che fa di fatto è **introdurre un buffer su TMR1H:**
-Il byte alto del timer a questo punto **on sarà più direttamente controllabile o leggibile**( lo chiameremo **TMR1H**), ma potremo accedere solamente al buffer( di fatto il PIC sposta fisicamente l'idirizzo, quindi a livello di codice noi accediamo lo stesso registro)
+Il byte alto del timer a questo punto **non sarà più direttamente controllabile o leggibile** ( lo chiameremo **TMR1H**), ma potremo accedere solamente al buffer( di fatto il PIC sposta fisicamente l'idirizzo, quindi a livello di codice noi accediamo lo stesso registro)
 **Il buffer viene copiato** quando viene toccato **TMR1L**:
 -	Leggo **TMR1L** -> **contemporaneamente TMR1H** verrà copiato in **TMR1H**, in questo modo il dato è salvato in sincronia, e anche se viene letto successivamente il conteggio del timer non lo influisce.
 -	Scrivo **TMR1H** -> nello stesso istante viene copiato **TMR1H** in **TMR1H**, il caricamento del valore iniziale viene fatto in sincronia e non c'è rischio di problemi in caricamento.
@@ -129,13 +129,13 @@ Il byte alto del timer a questo punto **on sarà più direttamente controllabile
 **Lo schermo LCD è composto da due righe e 16 colonne** .  
 La cosa importante da capire a riguardo è che per comunicare con questo display c’è un protocollo apposito, altrimenti dovremmo comunicare con la memoria interna dell’LCD. Per semplificarci la vita noi useremo la sua libreria che è ad un “livello di astrazione più alto” rispetto al manipolare l’LCD noi.
 
-Per comandare la memoria del dispositivo LCD bisogna **rispettare tempi precisi**, quindi nella libreria ci dovrà essere qualcosa che mi genera questi ritardi, non è importante sapere come generarli ma sapere che ci sono. Quando andiamo a scrivere sull’LCD una stringa questa funzione della libreria impiega tempo ( circa 1000 cicli macchina), **più che il quanto però l’importante è sapere che non è una operazione immediata come fare una somma scrivere qualcosa sull’LCD** .  
+Per comandare la memoria del dispositivo LCD bisogna **rispettare tempi precisi**, quindi nella libreria ci dovrà essere qualcosa che mi genera questi ritardi, non è importante sapere come generarli ma sapere che ci sono. Quando andiamo a scrivere sull’LCD una stringa questa funzione della libreria impiega tempo ( circa 1000 cicli macchina): **più che il quanto però l’importante è sapere che non è una operazione immediata come fare una somma scrivere qualcosa sull’LCD** .  
 
 **Come fanno a generarsi dei ritardi fissi?** Con una funzione come il **delay_ms()**. Attenzione che usare delay_ms() vuol dire sapere con sicurezza a che frequenza si sta andando. Per questo dovremmo impostare in un altro modo l’LCD se volessimo gestirlo ad una frequenza diversa dalla 32MHz (alla quale lo gestiamo noi). **Se imposti a 32 MHz la frequenza e non abiliti il PLL infatti, l’IDE fa i calcoli precisi con la frequenza che gli abbiamo impostato noi**.  
 
 Attenzione anche allo switch pin 6 (dallo schema e che dovrebbe essere già settato hardware giusto). Il display LCD è collegato alla porta B, sui primi 6 pin della porta B per la precisione, dalla 0 alla 5.  
 
-**Rimangono liberi B6 e B7**. Se abbiamo il display collegato da B0 a B5 non possono essere usati per altro se non per l’LCD. L’IOCB era dal B7 al B4. Ma se abbiamo intenzione di usare come In Circuit Debugger, **quindi se vogliamo usare il debugger per capire cosa non va nel nostro programma, anche B6 e B7 risulteranno fuori uso**. Per questo motivo l’IOCB non lo useremo più dai prossimi laboratori, ma ci concentreremo sulle altre porte, precisamente sul quando ci sarà una transazione di stato su qualunque pin.  
+**Rimangono liberi RB6 e RB7**. Se abbiamo il display collegato da RB0 a RB5 non possono essere usati per altro se non per l’LCD. L’IOCB (*Interrupt On Change port B*) era dal RB7 al RB4. Ma se abbiamo intenzione di usare come In Circuit Debugger, **quindi se vogliamo usare il debugger per capire cosa non va nel nostro programma, anche RB6 e RB7 risulteranno fuori uso**. Per questo motivo l’IOCB non lo useremo più dai prossimi laboratori, ma ci concentreremo sulle altre porte, precisamente sul quando ci sarà una transazione di stato su qualunque pin.  
 
 C’è una parte di codice fissa da impostare se vuoi accendere l’LCD:
 
@@ -168,11 +168,11 @@ void main(){
 
 **NB**: ricordati di attivare la libreria LCD e la parte di conversione delle char nell sezione delle librerie nell'IDE MikroC.
 
-In particolare il comando principale è **Lcd_Out(riga, colonna, “cosa vuoi scrivere”)**. Attenzione che **le stringhe in C sono un semplice array di char**, quindi una volta dichiarata la dimensione, quella è, non modificabile in runtime.  
+In particolare il comando principale è ``Lcd_Out(riga, colonna, “cosa vuoi scrivere”)``. Attenzione che **le stringhe in C sono un semplice array di char**, quindi una volta dichiarata la dimensione, quella è, non modificabile in runtime.  
 Quindi mi raccomando rifletti bene sulla dimensione di questo array, che risulta essere un puntatore alla prima cella della stringa.  
 In C non esiste nessun metodo a runtime per conoscere la lunghezza di un vettore.  
-Quando dichiariamo queste stringhe in C dobbiamo usare per forza quello che si chiama carattere di terminazione \0 e indica la terminazione di una stringa. **Quindi appena passo una stringa come variabile, il compilatore legge fino a \0 e poi si ferma** .  
-È importante questa cosa perché se gli passiamo una stringa senza carattere di terminazione lui continua a leggere anche oltre la terminazione di memoria che non appartiene più alla nostra variabile. **Lascia sempre lunghezzastringa+ 1 di spazio o rischi di sbagliare a stampare sull’LCD**.
+Quando dichiariamo queste stringhe in C dobbiamo usare per forza quello che si chiama carattere di terminazione `\0` e indica la terminazione di una stringa. **Quindi appena passo una stringa come variabile, il compilatore legge fino a `\0` e poi si ferma** .  
+È importante questa cosa perché se gli passiamo una stringa senza carattere di terminazione lui continua a leggere anche oltre la terminazione di memoria che non appartiene più alla nostra variabile. **Lascia sempre lunghezzastringa + 1 di spazio o rischi di sbagliare a stampare sull’LCD**.
 
 Riguardo all’LCD all’esame c'è il **file con la intestazione e la manipolazione base della stringhe**.
 
@@ -186,7 +186,7 @@ Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORT
 ```
   // ******ISR SCORRETTO******
   void interrupt(){
-    if(INTCON.REIF){ //flag alzata da PORTB
+    if(INTCON.RBIF){ //flag alzata da PORTB
     INTCON.RBIF=0; //Reset della flag
     // a questo punto accade il mismatch
     // non ho aggiornato PORTB prima di buttare giù la flag
@@ -196,7 +196,7 @@ Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORT
 
   // ******ISR CORRETTO******
   void interrupt(){
-    if(INTCON.REIF){ // flag alzata da PORTB
+    if(INTCON.RBIF){ // flag alzata da PORTB
     if(PORTB.RB6)} i++; // leggo PORTB ->Flip Flop aggiornato!
     if(PORTB.RB) i--; // altro refresh di PORTB
     INTCON.RBIF=0; //Reset della flag
@@ -213,7 +213,7 @@ Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da
 2.	Il sonar si appoggia al Timer **TXCON** change sovrascrive i dati nel registro del capture **CCPXCON** da 16 bit, suddiviso nei registri **CCPXH** e **CCPXL** (8 bit), high e low rispettivamente. I timer dispari vengono usati **Capture and Compare** mentre per i timer pari vengono usati per il **PWM**. Si imposta il timer con il registro **CCPTMRS0**.
 3.	È una periferica del uC, quindi per attivarne l’interrupt **INTCON.PEIE=1** (non dimenticare il general **INTCON.GIE=1**)
 4.	L’attivazione degli interrupt non è solo legata al registro **INTCON** ma anche ai registri **PIEX** e **PIRX**. Bisogna cercare il numero corretto del registro a cui sostituire la X. **Esistono cinque registri per gli interrupt**.
-5.	Se vuoi lo stream continuo dei dati imposta **LATC.RC6=1**, inoltre deve essere digital Output, quindi TRISC del bit 6 è sempre; Gli altri bit si possono mettere benissimo in modalità Input, in particolare **RC2** o **RC3** (digial/analog)
+5.	Se vuoi lo stream continuo dei dati imposta **LATC.RC6=1**, inoltre deve essere digital Output, quindi TRISC del bit 6 è alto sempre; Gli altri bit si possono mettere benissimo in modalità Input, in particolare **RC2** o **RC3** (digial/analog)
 6.	Non dimenticare la routine di interrupt che è sempre identica:
 
 
