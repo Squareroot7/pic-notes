@@ -7,8 +7,8 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 			NaN. [USO PORT O LAT IN READ O WRITE?](#uso-port-o-lat-in-read-o-write)
 			NaN. [EASYPIC BOARD SETUP ( usi tipici delle PORTx )](#easypic-board-setup-usi-tipici-delle-portx-)
 2. [Lezione 2 - Timer 0](#lezione-2-timer-0)
-3. [Lezione 2 - LCD](#lezione-2-lcd)
-4. [Lezione 3 - Interrupts](#lezione-3-interrupts)
+3. [Lezione 2 - TIMER1 modalità 16Bit vs 2*8](#lezione-2-timer1-modalit-16bit-vs-28)
+4. [Lezione 2 - LCD](#lezione-2-lcd)
 5. [Lezione 4 - CCP (Sonar)](#lezione-4-ccp-sonar)
 6. [Lezione 6 - ADC](#lezione-6-adc)
 7. [Lezione 7 - PWM](#lezione-7-pwm)
@@ -82,9 +82,8 @@ Ovviamente la frequenza minima ottenibile tenendo conto di **TMR0L** . Il tempo 
 
 **4/32MHz = 1/8MHz che corrisponde a 125 ns. Questo è fisso, a meno di disabilitare il PLL**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente ma se volessi fare meglio hai 2 opzioni: la prima è salvare bene il valore del tempo di interrupt e/o sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler (Ho fatto il calcolo, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi)**. Come funziona la seconda soluzione? Il valore iniziale del TMR0L, ogni volta che c’è un overflow, si attiva un interrupt ed è lì che dovrei impostare il valore che voglio nel TMR0L. **Per Timer0 impostare registri T0CON e INTCON.**
 
-<<<<<<< HEAD
 
-## TIMER1 a 16Bit vs 2*8  
+## Lezione 2 - TIMER1 modalità 16Bit vs 2*8  
 **NB:** solo i timer pari possono essere a 8 bit.  
 Detto ciò notiamo immediatamente che all' interno del registro TxCON è presente un bit (TxRD16) che parla di **modalità 16bit o 2x8**.  
 
@@ -125,10 +124,7 @@ Il byte alto del timer a questo punto **on sarà più direttamente controllabile
 **Problemi relativi a questo:**
 -	Se devo accedere solo a **TMR1H** Devo per forza leggere **TMR1L**, perdendo di fatto tempo.
 -	Se dovessi sbagliare l'ordine di lettura/scrittura otterrei dati/funzionamento non valido.
-## APPUNTI LCD LEZIONE 2
-=======
 ## Lezione 2 - LCD
->>>>>>> 10fb97b017419d825aa49f9039ddff2effb3d80a
 
 **Lo schermo LCD è composto da due righe e 16 colonne** .  
 La cosa importante da capire a riguardo è che per comunicare con questo display c’è un protocollo apposito, altrimenti dovremmo comunicare con la memoria interna dell’LCD. Per semplificarci la vita noi useremo la sua libreria che è ad un “livello di astrazione più alto” rispetto al manipolare l’LCD noi.
@@ -179,8 +175,6 @@ Quando dichiariamo queste stringhe in C dobbiamo usare per forza quello che si c
 È importante questa cosa perché se gli passiamo una stringa senza carattere di terminazione lui continua a leggere anche oltre la terminazione di memoria che non appartiene più alla nostra variabile. **Lascia sempre lunghezzastringa+ 1 di spazio o rischi di sbagliare a stampare sull’LCD**.
 
 Riguardo all’LCD all’esame c'è il **file con la intestazione e la manipolazione base della stringhe**.
-
-## Lezione 3 - Interrupts
 
 Vediamo come mai posso **rischiare di entrare due volte nella ISR dato un interrupt on change** .    
 Premo un bottone. Il valore logico di tensione che è fisicamente su PORTB hardware è 1 perché io sto premendo il bottone -> **XOR=1** -> scatta l'interrupT -> **RBIF=1**, il main si ferma ed entriamo in ISR.  
@@ -344,6 +338,49 @@ void interrupt(){
 }
 ```
 
+### Cosa succede se TIMER1 va in overflow più volte durante una misura di CCP?
+Di certo questo non è il caso del Sonar dato che il **tempo di overflow del TIMER1 è molto maggiore di quello del gradino in uscita dal sonar** .  
+Il caso di un overflow singolo è già stato trattato e, da come sappiamo, viene **"risolto" completamente dall'ALU** .  
+Quello che non viene gestito dall'ALU è invece un **overflow multiplo durante la misura**.  
+Infatti se mantenessimo il sistema come per il SONAR, la misura temporale finale sarebbe **errata**. Vediamo perchè succede questo:
+Se non tenessimo conto del numero di volte di overflow del **TIMER1** la misura finale corrisponderebbe a due intervalli:
+1. Tempo passato dal **primo rising edge** al **primo overflow**
+2. Tempo dall'**ultimo overflow** al **falling edge**  
+
+Tutto ciò, da come possiamo immaginare, **non tiene assolutamente conto degli ovf in mezzo**. Come possiamo risolvere questo caso?
+È necessario innanzitutto **contare gli ovf di TIMER1** quindi nella ISR avremo qualcosa simile a:  
+```
+void interrupt(){
+  if(PIR1.TMR1IF){
+    //inserire condizione che abilita ovf_number++ quando ho intercettato il rising edge
+    ovf_number++;
+  }
+  ...
+  //inserire interrupt CCP
+}
+```
+Bene, ora abbiamo nella variabile <code> ovf_number</code> il nostro numero di overflow. **Dobbiamo aggiungere questo tempo alla conta finale**. Nella routine dell'interrupt CCP dovremo modificare <code>ta</code> e <code>tb</code> in modo tale da avere:
+
+<code>ta = (((CCPRxH<<8) + CCPRxL ) + ovf_number<<16); </code>  
+Ovviamente al momento dell'altro fronte dovremo fare  la stessa operazione con la variabile <code>tb</code> :  
+<code>tb = (((CCPRxH<<8) + CCPRxL ) + ovf_number<<16); </code>  
+
+Da notare che la variabile <code> ovf_number</code> al primo aggiornamento (quello di <code>ta</code>) , rispetto al secondo aggiornamento (quello di <code>tb</code>), **sarà stata incrementata in caso di ovf**.
+**Worst case scenario:** anche  <code> ovf_number</code> va in overflow! Basta porla uguale a zero dopo aver fatto l'aggiornamento di tb, così **si escludono tutti gli ovf** avvenuti nel frattempo.
+
+
+**NB: le parentesi sono importanti** .
+Quando si eseguono operazioni di shift e somma che potrebbero essere fatte in più righe di codice come:
+```
+   ta=CCPRxH<<8; //ta è a 24 bit;
+   ta+=CCPRxL;
+   ta+=ovf_number<<16;
+```
+è buona regola essere abbondanti di parentesi per **essere** sicuri che il compilatore stia effettivamente facendo le operazioni desiderate e che non stia mescolando operazioni portando a errori che spesso e volentieri sono **ostici da debuggare**.  
+
+**NB: attenzione alla dimensione delle variabili** .  
+Se non trattassimo gli ov allora la variabile <code>ta</code> sarà (intuitivamente) di 16 bit (8 bit di CCPRxL + 8 bit CCPRxH). L'aggiunta della conta degli ovf però corrisponde ad una variabile di 8 bit shiftata di 16 -> **sono necessari 24 bit totali**  
+A seconda del compilatore, <code>ta</code> dovrà essere dichiarata come uint oppure <code>unsigned long int</code> (spesso 32 bit).
 
 
 
@@ -544,3 +581,39 @@ equ: analogo del define del c++. Si scrive come “MYPORT equ PORTD” (etichett
 - **Direttiva**: una direttiva assembly è un comando utilizzato a livello software che compare nel source code ma non è direttamente traducibile come opcode. Di conseguenza una direttiva non compare nell’instruction set del datasheet del PIC ma nella User’s guide del MPASM™ Assembler.
 - **Pseudo-istruzione**: istruzione ASM scritta con parole diverse in modo tale da agevolare la memorizzazione. Per esempio, nel PIC16 , c’è `MOVWF`, mentre la sua “complementare” dovrebbe essere `MOVFW`. Nelle istruzioni del datasheet però esiste solo `MOVF, w`. L’assemblatore via software permette di tradurre direttamente `MOVF,w` tramite la pseudo-istruzione `MOVFW`, in modo tale da avere meno confusione nel codice e migliore memorizzazione.
 - **Macro**: può essere considerata come “un’istruzione” a livello di sviluppo software, ma in realtà è **un gruppo di istruzioni unificate sotto un unico nome**. A differenza delle funzioni in linguaggio C, la macro è una sostituzione **in-line**. Questo significa che non viene effettuata una call, non viene cambiato il PC, non viene allocato spazio nello stack. Il contenuto della macro viene semplicemente inserito in quel punto del programma. Per l’utilizzo leggi la User’s guide del MPASM™ Assembler.
+
+### Scrivere programmi in pseudo codice
+Un processo alla base della scrittura di algoritmi per i neofiti della programmazione è **lo sviluppo iniziale in pseudo-codice** .  
+Pur essendo all'apparenza "troppo base e scontato", questo è un ottimo metodo sia per pensare all'algoritmo che per debuggare in caso di ricontrollo del codice.  
+Facciamo immediatamente un esempio (tenendo a mente le istruzioni del PIC16):
+
+Vogliamo comparare due variabili <code>PIPPO</code>  e <code>PLUTO</code>, ponendo come condizione vera quando PIPPO è maggiore di PLUTO. In linguaggio C tutto ciò è intuitivo:
+<code>if(PIPPO>PLUTO)</code>. Ma nelle istruzioni del PIC16 non c'è il confronto maggiore o minore, **possiamo usare solo addizioni, sottrazioni e operazioni logiche o bit a bit**.  
+Di conseguenza andiamo a scrivere un po' di pseudo codice utilizzando solo queste operazioni:  
+<code>prendi risultato            
+carica PIPPO su risultato   
+sottrai PLUTO a risultato   
+...   
+se risultato è negativo
+->PIPPO è minore di PLUTO  
+...  
+se risultato è positivo  
+->PIPPO è maggiore di PLUTO
+</code>
+
+Ora dobbiamo convertire tutto questo pseudo codice in qualcosa che il compilatore può capire.  
+**In questo esempio ci sono due criticità** :  
+1. è necessario avere un'ulteriore variabile risultato -> **uso il working register**
+2. devo controllare il segno di risultato -> lo **STATUS** contiene il bit carry che viene portato a 1 nel caso un'operazione restituisca una variabile negativa
+
+Vado dunque a scrivere il codice:
+
+```
+MOVFW PIPPO ; sposto PIPPO nel working
+SUBFW PLUTO ; sottraggo PLUTO al working
+BANKSEL STATUS ; vado a selezionare il bank in cui sta STATUS
+BTFSS STATUS, c; Se PIPPO-PLUTO<0  ALLORA SKIPPA
+GOTO PIPPO_MAGGIORE  ;se il bit test non non skippa allora PIPPO è maggiore
+GOTO PIPPO_MINORE; se il bit test skippa allora PIPPO è minore
+
+```
