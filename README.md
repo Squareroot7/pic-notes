@@ -617,3 +617,86 @@ GOTO PIPPO_MAGGIORE  ;se il bit test non non skippa allora PIPPO è maggiore
 GOTO PIPPO_MINORE; se il bit test skippa allora PIPPO è minore
 
 ```
+
+### Cosa deve essere salvato durante una IRQ (Interrupt request routine)                          
+**(pag 143 datasheet pic77 (vedi pag 40 per leggere dello stack)**
+
+```
+MOVWF W_TEMP ;Copy W to TEMP register, could be bank one or zero
+SWAPF STATUS,W ;Swap status to be saved into W
+CLRF STATUS ;bank 0, regardless of current bank, Clears IRP,RP1,RP0
+MOVWF STATUS_TEMP ;Save status to bank zero STATUS_TEMP register
+
+MOVF PCLATH, W ;Only required if using pages 1, 2 and/or 3
+MOVWF PCLATH_TEMP ;Save PCLATH into W
+CLRF PCLATH ;Page zero, regardless of current page
+
+BCF STATUS, IRP ;Return to Bank 0
+MOVF FSR, W ;Copy FSR to W
+MOVWF FSR_TEMP ;Copy FSR from W to FSR_TEMP
+
+: ;abbiamo salvato tutto quanto
+:(ISR)
+: ;dopo la routine di interrupt andiamo a ricaricare i salvataggi
+
+MOVF PCLATH_TEMP, W ;Restore PCLATH
+MOVWF PCLATH ;Move W into PCLATH
+SWAPF STATUS_TEMP,W ;Swap STATUS_TEMP register into W
+;(sets bank to original state)
+
+MOVWF STATUS ;Move W into STATUS register
+
+SWAPF W_TEMP,F ;Swap W_TEMP
+SWAPF W_TEMP,W ;Swap W_TEMP into W
+```
+
+### Stringa di configurazione della CPU  
+
+**_CONFIG**  		parola inizio configurazione  
+
+**_FOSC_XT &**		selezione oscillatore (XT: cristallo)  
+
+**_PWRTE_ON &**	delay per alimentazione stabile uC all’accensione (acceso)  
+
+**_CP_OFF &** 		code protection (inattivo)  
+
+**_BOREN_ON**		brown out detect (attivo), se la tensione scende sotto una soglia (es alimentazione da batteria che si scarica) per evitare processi errati all’interno del uC, il **brown out resetta e tiene resettato il uC continuamente**
+
+### Coice di esempio con loop infinito  
+**Questo codice contiene l'inizio del file asm che deve essere sempre inserito**
+
+```
+_CONFIG _FOSC_XT & _PWRTE_ON & _CP_OFF & _BOREN_ON
+GENERATOR
+RES_VECT CODE 0x0000 ; processor reset vector
+GOTO START ; go to beginning of
+program
+; TODO ADD INTERRUPTS HERE IF USED
+MAIN_PROG CODE ; let linker place main program
+START
+GOTO $ ; loop forever
+END
+```
+
+### Indirizzamento diretto e indiretto (come utilizzare FSR e INDF)
+1. **Diretto**: **l’indirizzo della RAM è direttamente contenuto nell’opcode**, quindi l’indirizzo viene dall’instruction register (che contiene l’opcode appena ricavato dal PC)  
+
+2. **Indiretto**: **l’indirizzo della RAM è già contenuto nel FSR**(File Select Register), di conseguenza l’opcode non deve contenere direttamente l’indirizzo nell’ISR ma il suo “indice” (come un puntatore). **Può essere utilizzato per non dover riscrivere miliardi di volte lo stesso codice per indirizzi diversi** (tipo clear indirizzo 1, clear indirizzo 2, clear indirizzo 3). Mi basta incrementare il FSR e ripeto la stessa routine tot volte.
+
+### Codice d'esempio sull'utilizzo di un FOR con FSR/INDF
+```
+CLRF 20h ; clear data at adress 20h
+CLRF 21h ; clear data at adress 21h
+:
+:
+CLRF 30h ; clear data at adress 30h
+```
+
+**Come possiamo ottimizzare questa lunga scrittura ripetitiva e brutta da vedere? Vediamo come fare con FSR e INDF**
+```
+	MOVLW 0x20   ; Sposto l'indirizzo di partenza in W
+	MOVWF FSR	; lo butto nel FSR
+EXT CLRF INDF	; pulisco il registro puntato utilizzando INDF (NON USARE FSR, NON È SCRIVIBILE)
+	INCF FSR, f  ; incremento FSR -> vado da 20h a 21h
+	BTFSS FSR, 5 ; il bit 5 è a 1? Allora sono passato a 3xh (in cui la x sta per una cifra qualsiasi) quindi nel nostro caso 30h
+	GOTO NEXT    ; se non siamo ancora a 30h continua a pulire
