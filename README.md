@@ -23,6 +23,8 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 
 ## Lezione 1 - GPIO
 
+<a href="https://imgbb.com/"><img src="https://i.ibb.co/MGJ47Z2/Input-Output.jpg" alt="Input-Output" border="0"></a>
+
 NB: pin settati in Input per default. Quando si setta un digital out scrivere sempre LATx=0 per reset.
 
 | Uso         | TRIS          | ANSEL          |
@@ -61,6 +63,9 @@ Ora cambio **RB1** da digital Output a digital Input. Come risultato finale supp
 - **PORTE**: usata per un PWM, PWM software o per dei led di segnalazione. RE2 PWM, RE3 MCRL.
 
 ## Lezione 2 - Timer 0
+
+<a href="https://ibb.co/HnxzQXy"><img src="https://i.ibb.co/wMwW1Yq/timer0.jpg" alt="timer0" border="0"></a>
+
 Il TIMER0 è per definizione un contatore che subisce un overflow dopo un tempo definito dall'utente attraverso setup dei registri dedicati.
 Si parte da un oscillatore esterno o interno. Mediante un multiplexer possiamo selezionare la frequenza di incremento del contatore. **la nostra frequenza tipica è Fosc/4 in cui, grazie al PLL, Fosc è 32MHz (8MHz di default)**.
 
@@ -124,6 +129,7 @@ Il byte alto del timer a questo punto **non sarà più direttamente controllabil
 **Problemi relativi a questo:**
 -	Se devo accedere solo a **TMR1H** Devo per forza leggere **TMR1L**, perdendo di fatto tempo.
 -	Se dovessi sbagliare l'ordine di lettura/scrittura otterrei dati/funzionamento non valido.
+
 ## Lezione 2 - LCD
 
 **Lo schermo LCD è composto da due righe e 16 colonne** .  
@@ -180,6 +186,8 @@ Vediamo come mai posso **rischiare di entrare due volte nella ISR dato un interr
 Premo un bottone. Il valore logico di tensione che è fisicamente su PORTB hardware è 1 perché io sto premendo il bottone -> **XOR=1** -> scatta l'interrupT -> **RBIF=1**, il main si ferma ed entriamo in ISR.  
 Ora che siamo nella ISR **INTCON.RBIF==1** ? Sì, la flag è partita alla pressione del bottone.
 
+<a href="https://ibb.co/Sy6qrSY"><img src="https://i.ibb.co/W5HStC8/RBIF.jpg" alt="RBIF" border="0"></a>
+
 Se ora resetto subito la flag ma non faccio nessuna lettura della **PORTB**, la **XOR** è ancora a 1, il PIC rialza la flag: questo perché la Q del flip flop non è stata cambiata (non ho letto niente ancora), è ancora 0, ma su **PORTB** il pulsante è ancora premuto quindi c’è un mismatch e l’uscita dello XOR è ancora 1. Ma quindi, dato che la flag è ancora alta, appena esco dal primo ISR rientro subito ed eseguo ISR una seconda volta, tutto questo mentre io sto ancora premendo il pulsante. Ancora una volta INTCON.RBIF==1, resetto la flag alla prima riga della ISR ma la seconda volta non è più vero che c’è il mismatch perché l’uscita del flip flop è stata aggiornata dalla ISR precedente (abbiamo fatto una read sulla PORTB tramite la condizione if (PORTB.RB6) appena dopo aver buttato giù la flag). L’uscita della XOR ora è a 0 e non rientrerò più nel ISR.
 Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORTB mi frego e rientro due volte nella stessa ISR ad ogni pressione del pulsante dell’interrupt on change.
 
@@ -207,6 +215,8 @@ Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORT
 
 
 ## Lezione 4 - CCP (Sonar)
+
+<a href="https://imgbb.com/"><img src="https://i.ibb.co/PYnXSGL/capture.jpg" alt="capture" border="0"></a>
 
 Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da ricordare sono principalmente:  
 1.	Il sonar è collegato a **PORTC**. Se il sonar viene utilizzato in modalità **Pulse Width Output**, devo impostare **RC2 digital Input**  (ANSELC=0 TRISC=1); sennò uso **RC3** come **Analog Input** -> è necessario usare l’**ADC**.
@@ -385,6 +395,9 @@ A seconda del compilatore, <code>ta</code> dovrà essere dichiarata come uint op
 
 
 ## Lezione 6 - ADC
+
+<a href="https://ibb.co/6WhXcQ8"><img src="https://i.ibb.co/JsL3WZq/adc.jpg" alt="adc" border="0"></a>
+
 L’**ADC funziona a 8 oppure 10 bit** .  
 I registri dell’**ADC** da settare sono **ADCON0 ADCON1 ADCON2** .  
 - **ADCON0** serve a determinare attraverso i bit da 6 a 2 il pin scelto del uC per la conversione.  
@@ -434,6 +447,9 @@ ADCON0.GO_NOT_DONE = 1; // Start ADC Acquisition
 ```
 
 ## Lezione 7 - PWM
+
+<a href="https://imgbb.com/"><img src="https://i.ibb.co/pn1T8cm/pwm.jpg" alt="pwm" border="0"></a>
+
 Il **PWM** è un modulo che permette di generare un’onda quadra con duty cycle variabile. Viene spesso usato per alimentare a diverse potenze un carico.
 **Il PWM ha due comparatori HIGH/LOW** .  
 Il comparatore sotto setta l’Output, mentre il comparatore sopra lo resetta.
@@ -572,11 +588,12 @@ Lo STATUS è uno dei registri più importanti del microcontrollore. Esso contien
 
 ### Direttive ASM
 - **`\#include`**: tale e quale a C++. Si usa con #include <p18f452.inc>
-UDATA: dichiara l’inizio di una sezione di dati non inizializzati. Per riservare lo spazio in questa sezione bisogna utilizzare la direttiva RES. L’utilizzo è “LABEL res #byte”.Se non vengono specificate label e indirizzo, (es VARIABLES_IN_BANK udata 0x20) si scrive .udata e il linker fa tutto da sé.
+- **UDATA**: dichiara l’inizio di una sezione di dati non inizializzati. Per riservare lo spazio in questa sezione bisogna utilizzare la direttiva RES. L’utilizzo è “LABEL res #byte”.Se non vengono specificate label e indirizzo, (es VARIABLES_IN_BANK udata 0x20) si scrive .udata e il linker fa tutto da sé.
 - **`BANKSEL XXX`**: Serve per selezionare automaticamente il bank in base all’etichetta desiderata. Quindi se voglio selezionare un TRISB e non so dove sono, scrivo BANKSEL TRISB. Questo mi permette di poter mettere (con le dovute precauzioni della scelta del micro) lo stesso codice su un altro micro senza preoccuparmi del Bank da selezionare.
 - **`CODE XXXX`**: (indirizzo opzionale) significa che il linker può piazzare il codice nella program memory all’indirizzo specifico XXXX segnalato dall’utente, oppure viene lasciata libera la scelta dell’indirizzo al linker se XXXX non viene specificato.
 - **`END`**: specifica all’assembler che questa è la fine del file asm. Ogni file asm deve necessariamente finire con la direttiva END. Se così non fosse, l’assembler continuerebbe a passare tutta la memoria.
-equ: analogo del define del c++. Si scrive come “MYPORT equ PORTD” (etichetta eq nome_indirizzo_in_RAM).
+- **equ**: analogo del define del c++. Si scrive come “MYPORT equ PORTD” (etichetta eq nome_indirizzo_in_RAM).
+
 #### Differenze tra pseudo-istruzioni, macro, direttive
 - **Direttiva**: una direttiva assembly è un comando utilizzato a livello software che compare nel source code ma non è direttamente traducibile come opcode. Di conseguenza una direttiva non compare nell’instruction set del datasheet del PIC ma nella User’s guide del MPASM™ Assembler.
 - **Pseudo-istruzione**: istruzione ASM scritta con parole diverse in modo tale da agevolare la memorizzazione. Per esempio, nel PIC16 , c’è `MOVWF`, mentre la sua “complementare” dovrebbe essere `MOVFW`. Nelle istruzioni del datasheet però esiste solo `MOVF, w`. L’assemblatore via software permette di tradurre direttamente `MOVF,w` tramite la pseudo-istruzione `MOVFW`, in modo tale da avere meno confusione nel codice e migliore memorizzazione.
@@ -702,3 +719,8 @@ EXT CLRF INDF	; pulisco il registro puntato utilizzando INDF (NON USARE FSR, NON
 	INCF FSR, f  ; incremento FSR -> vado da 20h a 21h
 	BTFSS FSR, 5 ; il bit 5 è a 1? Allora sono passato a 3xh (in cui la x sta per una cifra qualsiasi) quindi nel nostro caso 30h
 	GOTO NEXT    ; se non siamo ancora a 30h continua a pulire
+```
+
+### PIC 16
+
+<a href="https://ibb.co/C1D9Ls0"><img src="https://i.ibb.co/LkHgKhp/asmpic16.png" alt="asmpic16" border="0"></a>
