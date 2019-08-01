@@ -54,7 +54,7 @@ Ora cambio **RB1** da digital Output a digital Input. Come risultato finale supp
 
 
 ##### EASYPIC BOARD SETUP ( usi tipici delle PORTx )
-- **PORTA**: usata per aggiungere pulsanti e per fare polling. RA7-RA7 Connesse all'oscillatore.
+- **PORTA**: usata per aggiungere pulsanti e per fare polling. RA7-RA7 Connessi all'oscillatore.
 - **PORTB**: quasi interamente dedicata al LCD, attenzione che potrebbero venire usati RB6 e RB7 come pulsanti per interrupt on change (IOCB), IOCB disponibile da RB7-RB4, LCD connesso da RB5-RB0. **NB**: RB6 e RB7 vanno fuori uso con il debugger ON.
 - **PORTC**: poco spesso usata per altri scopi se non per il modulo sonar.
 - **PORTD**: spesso usata per operazioni con i led (tutta la porta). RD1 PWM.
@@ -654,7 +654,9 @@ SWAPF W_TEMP,W ;Swap W_TEMP into W
 
 **_CONFIG**  		parola inizio configurazione  
 
-**_FOSC_XT &**		selezione oscillatore (XT: cristallo)  
+**_FOSC_XT &**		selezione oscillatore (XT: cristallo)
+
+**_WDTE_OFF &** 	watch dog (inattivo)	  
 
 **_PWRTE_ON &**	delay per alimentazione stabile uC all’accensione (acceso)  
 
