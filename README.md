@@ -724,3 +724,113 @@ EXT CLRF INDF	; pulisco il registro puntato utilizzando INDF (NON USARE FSR, NON
 ### PIC 16
 
 <a href="https://ibb.co/C1D9Ls0"><img src="https://i.ibb.co/LkHgKhp/asmpic16.png" alt="asmpic16" border="0"></a>
+
+### Appunti sulle conversioni sonar modalità capture e sonar letto con l'adc:
+
+## SONAR in modalità CAPTURE:
+
+<a href="https://imgbb.com/"><img src="https://i.ibb.co/gWjFM3g/microcontrolloricapturesonar.jpg" alt="microcontrolloricapturesonar" border="0"></a>
+
+# Premesse legate al datasheet del sonar e al datasheet del PIC
+
+Il sonar in modalità capture viene visto sulla porta RC2 come input digitale. 
+
+L’interrupt del capture è PIRX.CCPXIF.
+
+L’Enable si trova nel PIEx registro.
+
+Supponiamo di usare il CCP1CON, registro capture relativo al timer 1.
+
+# Come mai il risultato della conversione va diviso per 8? <code>(width = width >> 3)</code> 
+
+La nostra frequenza è 32MHz. Noi lavoriamo alla f del capture che è <code>( fosc/4 )= 8 MHz</code>. 
+
+La pendenza in modalità capture è <code>1mm = 1us</code> (vedi datasheet sonar).
+
+Il passo del ccp nel tempo sarà <code>1/f = 1/8 MHz = 125 ns</code>
+
+In particolare, se ogni passo del sonar è 1u e un passo del ccp è 125 ns, allora la conversione è <code>c = (t/125ns) =8 passi</code>
+
+Ovvero, per **ottenere un microsecondo sono necessari otto passi del ccp.**
+
+** Quindi se <code>1us : 125 ns = 8 LSB </code>**
+
+- 300us ovvero <code>300 mm : 125 ns= 2400</code> passi del ccp
+
+- 5000 us ovvero <code>5000 mm:125 ns= 40000</code> passi del ccp.
+
+## SONAR letto con ADC:
+
+# Premesse legate al datasheet del sonar e al datasheet del PIC
+
+Il sonar letto con l’ADC invece viene visto sulla porta RC3 come input analogico.
+
+L’interrupt dell’ADC è PIR1.ADIF
+
+L’enable si trova nel PIE1.ADIE
+
+<a href="https://imgbb.com/"><img src="https://i.ibb.co/W5R1rGR/microcontrollori.jpg" alt="microcontrollori" border="0"></a>
+
+# Come mai il risultato della conversione va moltiplicato per 5? <code>(width = width * 5)</code>
+
+La equazione di questa retta sarebbe <code>V = 5V/5000mm * d</code>
+
+Dove V è la tensione e d la distanza.
+
+La pendenza della retta sarebbe precisamente 5V/5000mm ovvero, 1mV/1mm
+
+Vediamo ora quanti livelli ha l’ADC: 5V/1024 = 4.88 mV. Passo per livello riconosciuto del sonar.
+
+Ogni passo dell’ADC sarebbe circa 5mV. Più precisamente 4.88 mV. * (per vedere come ottenere massima precisione vedi dopo)
+
+Cerchiamo ora di scoprire a che livello si trova la minima distanza riconosciuta dal sonar, facciamo una proporzione:
+
+<code>5V:1024=0.3:X</code> ovvero X=61. I livelli riconosciuti dall’ADC vanno quindi da 61 a 1024.
+
+Quindi la conversione da V a livelli segue questa equazione:
+
+<code> V = a * LSB </code> dove LSB è 5mV ( o più precisamente 4.88mV)
+
+Se quindi dobbiamo passare allo spazio tramite i livelli (che sono il risultato nel registro dell’ADC) allora:
+
+<code> d = (1mm/1mV) * V </code>
+
+**Ma V è uguale ad (a * LSB)**
+
+<code>d = (1mm/1mV) * a * LSB = 1mm * a * 4.88 = 4.88 mm * a </code>
+
+<code> d = 4.88mm * a <code>
+
+<code> d = (5000/1024) * a * mm </code> (posso scegliere l’unità di misura, da mm a metri ma sarebbe meno preciso)
+
+*se vogliamo tenere 4.88 a precisione massima dobbiamo tenere conto che lavoriamo su registri 16 bit. 
+
+<a href="https://imgbb.com/"><img src="https://i.ibb.co/fHN721P/microcontrolloriadc2.jpg" alt="microcontrolloriadc2" border="0"></a>
+
+Sapendo che 5 viene scritto con 3 bit 101 in binario. 
+L’operazione da fare sarà fare divisioni e moltiplicazioni in modo da mantenere il risultato nei limiti dei 16 bit.
+
+In particolare sappiamo che i livelli a vanno da 0 a 1024, quindi occupano sempre 10 bit.
+ 
+Abbiamo quindi massimo 5 bit liberi su cui lavorare (uno ce lo teniamo libero per essere sicuri di non fare errori di calcolo).
+
+Le operazioni da fare saranno, sapendo che 
+d= (5000/1024)*a
+
+E sapendo che <code>5000=2^3 * 5^4</code> e <code>1024=2^10</code>, a occupa sempre 10 bit allora: d= ((5^4)/(2^7) )*a
+
+Dovrò moltiplicare per quattro volte 5 e dividere per 2 sette volte. Se lo faccio nella giusta sequenza mantengo precisione:
+
+<code> a*5 13 bit</code>
+
+<code>a*5>>1 12 bit</code> (quindi c’è spazio per un’altra moltiplicazione per 5 e arrivo a 15 bit che è il limite dello spazio di lavoro)
+
+<code>(a*5>>1)*5 15 bit</code>
+
+<code>((a*5>>1)*5)>>3 12 bit</code>
+
+<code>(((a*5>>1)*5)>>3)*5 15 bit</code>
+
+<code>(((((a*5>>1)*5)>>3)*5)>>3) 12 bit</code>
+
+<code>((((((a*5>>1)*5)>>3)*5)>>3)*5) 15 bit </code>
