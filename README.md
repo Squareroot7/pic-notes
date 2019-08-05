@@ -721,17 +721,17 @@ EXT CLRF INDF	; pulisco il registro puntato utilizzando INDF (NON USARE FSR, NON
 	GOTO NEXT    ; se non siamo ancora a 30h continua a pulire
 ```
 
-### PIC 16
+## PIC 16
 
 <a href="https://ibb.co/C1D9Ls0"><img src="https://i.ibb.co/LkHgKhp/asmpic16.png" alt="asmpic16" border="0"></a>
 
-### Appunti sulle conversioni sonar modalità capture e sonar letto con l'adc:
+## Appunti sulle conversioni sonar modalità capture e sonar letto con l'adc:
 
-## SONAR in modalità CAPTURE:
+### SONAR in modalità CAPTURE:
 
 <a href="https://imgbb.com/"><img src="https://i.ibb.co/gWjFM3g/microcontrolloricapturesonar.jpg" alt="microcontrolloricapturesonar" border="0"></a>
 
-# Premesse legate al datasheet del sonar e al datasheet del PIC
+**Premesse legate al datasheet del sonar e al datasheet del PIC**
 
 Il sonar in modalità capture viene visto sulla porta RC2 come input digitale. 
 
@@ -741,7 +741,7 @@ L’Enable si trova nel PIEx registro.
 
 Supponiamo di usare il CCP1CON, registro capture relativo al timer 1.
 
-# Come mai il risultato della conversione va diviso per 8? <code>(width = width >> 3)</code> 
+**Come mai il risultato della conversione va diviso per 8?** <code>(width = width >> 3)</code> 
 
 La nostra frequenza è 32MHz. Noi lavoriamo alla f del capture che è <code>( fosc/4 )= 8 MHz</code>. 
 
@@ -759,9 +759,9 @@ Ovvero, per **ottenere un microsecondo sono necessari otto passi del ccp.**
 
 - 5000 us ovvero <code>5000 mm:125 ns= 40000</code> passi del ccp.
 
-## SONAR letto con ADC:
+### SONAR letto con ADC:
 
-# Premesse legate al datasheet del sonar e al datasheet del PIC
+**Premesse legate al datasheet del sonar e al datasheet del PIC**
 
 Il sonar letto con l’ADC invece viene visto sulla porta RC3 come input analogico.
 
@@ -771,7 +771,7 @@ L’enable si trova nel PIE1.ADIE
 
 <a href="https://imgbb.com/"><img src="https://i.ibb.co/W5R1rGR/microcontrollori.jpg" alt="microcontrollori" border="0"></a>
 
-# Come mai il risultato della conversione va moltiplicato per 5? <code>(width = width * 5)</code>
+**Come mai il risultato della conversione va moltiplicato per 5?** <code>(width = width * 5)</code>
 
 La equazione di questa retta sarebbe <code>V = 5V/5000mm * d</code>
 
@@ -799,11 +799,12 @@ Se quindi dobbiamo passare allo spazio tramite i livelli (che sono il risultato 
 
 <code>d = (1mm/1mV) * a * LSB = 1mm * a * 4.88 = 4.88 mm * a </code>
 
-<code> d = 4.88mm * a <code>
+<code> d = 4.88mm * a </code>
 
-<code> d = (5000/1024) * a * mm </code> (posso scegliere l’unità di misura, da mm a metri ma sarebbe meno preciso)
+<code>d = (5000/1024) * a * mm </code> 
+(posso scegliere l’unità di misura, da mm a metri ma sarebbe meno preciso)
 
-*se vogliamo tenere 4.88 a precisione massima dobbiamo tenere conto che lavoriamo su registri 16 bit. 
+**se vogliamo tenere 4.88 a precisione massima dobbiamo tenere conto che lavoriamo su registri 16 bit.** 
 
 <a href="https://imgbb.com/"><img src="https://i.ibb.co/fHN721P/microcontrolloriadc2.jpg" alt="microcontrolloriadc2" border="0"></a>
 
@@ -833,4 +834,4 @@ Dovrò moltiplicare per quattro volte 5 e dividere per 2 sette volte. Se lo facc
 
 <code>(((((a*5>>1)*5)>>3)*5)>>3) 12 bit</code>
 
-<code>((((((a*5>>1)*5)>>3)*5)>>3)*5) 15 bit </code>
+<code>((((((a*5>>1)*5)>>3)*5)>>3)*5) 15 bit</code>
