@@ -25,7 +25,7 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 
 <a href="https://imgbb.com/"><img src="https://i.ibb.co/MGJ47Z2/Input-Output.jpg" alt="Input-Output" border="0"></a>
 
-NB: pin settati in Input per default. Quando si setta un digital out scrivere sempre LATx=0 per reset.
+**NB:** tutti i pin sono settati in **Input di default**. Quando si setta un digital out scrivere sempre LATx=0 per reset.
 
 | Uso         | TRIS          | ANSEL          |
 |:------------|:--------------|:---------------|
@@ -34,7 +34,9 @@ NB: pin settati in Input per default. Quando si setta un digital out scrivere se
 | Analog In   | TRISx.pin = 1 | ANSELx.pin = 1 |
 
 
-**NB**: se dei pin non vengono definitivamente utilizzati nel progetto, vengono settati come Output e poi il **LAT viene impostato a 0**. Questo per prevenire cambi della porta che comportano consumo dovuto alla potenza dinamica di switching dell’ingresso.
+**NB**: se dei pin **non vengono definitivamente utilizzati** nel progetto, vengono settati come Output e poi il **LAT viene impostato a 0**. Questo previene switch (dovuti a cariche parassite accumulate) della porta che comportano consumo dovuto alla potenza dinamica di switching dell’ingresso.  
+
+
 Ogni port ha diversi registri:
 
 | Registro | 0 =                       | 1 =                        | Al reset               |
@@ -47,15 +49,15 @@ Ogni port ha diversi registri:
 
 ##### USO PORT O LAT IN READ O WRITE?
 - **WRITE**: **LATx** e **PORTx** effettuano la stessa identica operazione di scrittura
-- **READ**: **PORTx** rappresenta lo stato fisico del pin, mentre **LATx** rappresenta il registro che comanda il data latch.  
+- **READ**: **PORTx** rappresenta lo stato fisico del pin, mentre **LATx** rappresenta il registro che pilota il data latch.  
 
-**Quando avvengono casini?** Prendo per esempio **RB1** come digital Output. Faccio tutte le operazioni che mi pare con **PORTB.RB1** oppure **LATB.RB1** (non fa differenza).  
+**Quando entrano in gioco i problemi?** Prendo per esempio **RB1** come digital Output. Faccio tutte le operazioni che mi pare con **PORTB.RB1** oppure **LATB.RB1** (non fa differenza).  
 Ora cambio **RB1** da digital Output a digital Input. Come risultato finale suppongo di avere **LATB.RB1=1**. Un bottone esterno impone ora il pin fisico con stato a 0. Se ora uso **PORTB.RB1**, leggo che effettivamente il pin è a zero. Se invece leggo LATB.RB1 mi ritrovo che il pin è a 1! Di conseguenza cosa devo usare?
-- **digital Input usare sempre e solo PORTB** in READ  
-- **digital Output** usare **PORTB** e **LATD** in WRITE a piacere
+- **digital Input usare sempre e solo PORTB** in **READ**  
+- **digital Output** usare **PORTB** e **LATD** in **WRITE** a piacere
 
 
-##### EASYPIC BOARD SETUP ( usi tipici delle PORTx )
+##### EASYPIC BOARD SETUP ( usi tipici delle PORTx per il corso di microcontrollori)
 - **PORTA**: usata per aggiungere pulsanti e per fare polling. RA7-RA7 Connessi all'oscillatore.
 - **PORTB**: quasi interamente dedicata al LCD, attenzione che potrebbero venire usati RB6 e RB7 come pulsanti per interrupt on change (IOCB), IOCB disponibile da RB7-RB4, LCD connesso da RB5-RB0. **NB**: RB6 e RB7 vanno fuori uso con il debugger ON.
 - **PORTC**: poco spesso usata per altri scopi se non per il modulo sonar.
@@ -66,33 +68,43 @@ Ora cambio **RB1** da digital Output a digital Input. Come risultato finale supp
 
 <a href="https://ibb.co/HnxzQXy"><img src="https://i.ibb.co/wMwW1Yq/timer0.jpg" alt="timer0" border="0"></a>
 
-Il TIMER0 è per definizione un contatore che subisce un overflow dopo un tempo definito dall'utente attraverso setup dei registri dedicati.
-Si parte da un oscillatore esterno o interno. Mediante un multiplexer possiamo selezionare la frequenza di incremento del contatore. **la nostra frequenza tipica è Fosc/4 in cui, grazie al PLL, Fosc è 32MHz (8MHz di default)**.
+Il TIMER0 è un contatore che subisce un overflow (passaggio da valore massimo a zero) dopo un tempo definito dall'utente attraverso il setup dei registri dedicati.
+Si parte dalla selezione dell'oscillatore esterno o interno. Mediante un multiplexer possiamo selezionare la frequenza di incremento del contatore. **la nostra frequenza tipica è Fosc/4 in cui, grazie al PLL, Fosc è 32MHz (8MHz di default)**.
 
 **T0CKI** pin non lo useremo mai, è il pin per comunicare con l'esterno che se abilitato come sorgente fornisce un impulso edge sensitive in base alla impostazione selezionata con T0SE (variazione sul rising/falling edge).
 
-Successivamente alla selezione della sorgente c'è la scelta del sì o no prescaler, **il prescaler è un divisore di frequenza**. Il modo più facile per creare un prescaler è fare un contatore. All'interno del prescaler c'è quindi un contatore che quando supera una certa soglia dà in uscita un altro impulso. Questo prescaler può essere settato solo a potenze di 2 da 4 a 256 (massimo prescaler-> massimo tempo-> minima frequenza).
+Successivamente alla selezione della sorgente c'è la scelta del sì o no prescaler, **il prescaler è un divisore di frequenza**. Il modo più facile per costruire un prescaler è utilizzare un contatore. Quest'ultimo quando supera una certa soglia fornisce in uscita un impulso. Può essere settato solo a potenze di 2 da 4 a 256 (massimo prescaler-> massimo tempo-> minima frequenza).
 
-Ultima selezione, tralasciando il sync clock, che dice semplicemente che devono passare due colpi di clock per aggiornare il timer, abbiamo il registro **TMR0L (registro low del timer 0)**. È un registro a 8 bit, i meno significativi del nostro registro di timer. **Questo registro è un altro contatore che setta la flag dell'interrupt TMR0IF quando va in overflow**. Se disabilito l’interrupt posso usarlo anche solo come contatore. **Il registro principale per configurare è T0CON**.
+L'ultima sezione, tralasciando il sync clock, dice semplicemente che devono passare due colpi di clock per aggiornare il timer. Ci ritroviamo infine con il registro **TMR0L (registro low del timer 0)**. È un registro a 8 bit, i meno significativi del nostro registro di timer. **Questo registro è un contatore che setta la flag dell'interrupt TMR0IF quando va in overflow**. Se disabilito l’interrupt posso usarlo anche solo come contatore. **Il registro principale per configurare è T0CON**.
 
-Con il TIMER0 quindi usiamo il suo l’interrupt per temporizzare e salviamo o incrementiamo la variabile di conta ad ogni interrupt.  
-Per la precisione la **frequenza di interrupt è frequenza d’ingresso (Fosc/4) diviso il prescaler che va da non attivo a 256** .  
-Successivamente tutto dipende dal **valore iniziale di TMR0L** perché altrimenti non servirebbero 256 impulsi per far avvenire l’overflow se non ci fosse il valore del **TMRL0** a zero. Ma ovviamente meno di 255 per la formula scritta successivamente. La configurazione con cui usiamo la nostra scheda è 32MHz. La frequenza di interrupt minima (che corrisponde al massimo tempo tra un interrupt e l’altro), è:  
+Attraverso gli overflow del TIMER0, quindi attraverso la routine di interrupt legata al flag del timer, possiamo gestire periodicamente delle sottosezioni di codice.  
+
+La **frequenza di interrupt è frequenza d’ingresso (Fosc/4) diviso il prescaler che va da 1 (prescaler non attivo) a 256** .  
+
+La configurazione con cui usiamo la nostra scheda è 32MHz. La frequenza di interrupt minima (che corrisponde al massimo tempo tra un interrupt e l’altro), è:  
 
 <code> **f_min = f_osc / ( 4 * 256 * ( 256 - TMR0L ) )** </code>
 
-Ovviamente la frequenza minima ottenibile tenendo conto di **TMR0L** . Il tempo di interrupt si ottiene semplicemente ribaltando la formula:  
+Bisogna tenere conto del **valore di TMR0L** (il valore iniziale contenuto nel registro). Settando **TMR0L=0** siamo sicuri che il contatore parta a contare sempre da zero.  
+**Se vogliamo una frequenza di interrupt diversa da una potenza di 2** (vedi formula sopra), all'interno della routine di interrupt possiamo impostare TMR0L ad un valore diverso da zero.
+
+Il **tempo di interrupt** si ottiene semplicemente ribaltando la formula:  
 
 <code> **t_max = ( 4 * 256 * ( 256 - TMR0L ) ) / f_osc** </code>
 
-**4/32MHz = 1/8MHz che corrisponde a 125 ns. Questo è fisso, a meno di disabilitare il PLL**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente ma se volessi fare meglio hai 2 opzioni: la prima è salvare bene il valore del tempo di interrupt utilizzando un long int e tenendo per esempio in conto che ogni interrupt è 8192, e/o sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler (Ho fatto il calcolo, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi)**. Come funziona la seconda soluzione? Il valore iniziale del TMR0L, ogni volta che c’è un overflow, si attiva un interrupt ed è lì che dovrei impostare il valore che voglio nel TMR0L. **Per Timer0 impostare registri T0CON e INTCON.**
+**4/32MHz = 1/8MHz corrispondono a 125 ns. Questo è fisso (a meno di disabilitare il PLL)**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente. Se si volesse avere più precisione ci sono 2 opzioni:
+- Salvare bene il valore del tempo di interrupt utilizzando un long int e tenendo per esempio in conto che ogni interrupt è 8192
+- sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler. Per esempio, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi**. Questa impostazione deve essere inserita sempre all'interno della routine di interrupt e nelle prime righe di setup del codice così da avere:
+	- il valore iniziale impostato correttamente all'accensione del micro
+	- ogni volta che il timer va in overflow resettiamo la conta al valore iniziale voluto
 
 
 ## Lezione 2 - TIMER1 modalità 16Bit vs 2*8  
-**NB:** solo i timer pari possono essere a 8 bit.  
-Detto ciò notiamo immediatamente che all' interno del registro TxCON è presente un bit (TxRD16) che parla di **modalità 16bit o 2x8**.  
+**NB:** solo i timer di indice pari possono essere a 8 bit (TIMER2,TIMER4).  
+Però notiamo che all'interno del registro TxCON è presente un bit (TxRD16) che parla di **modalità 16bit o 2x8**.  
 
-È possibile usare **TMR** dispari a 8 bit, ma **è necessario o precaricare il byte alto a FF per avere interrupt corretti, o usare solo il byte alto tenendo conto del prescaling fatto da L di 256.**
+È certamente possibile utilizzare i timer di indice dispari a 8 bit, ma è necessaria una delle seguenti manovre:
+- essendo il timer a 16 bit, usiamo solo gli 8 bit più significativi in modo tale da poter comunque sfruttare l'overflow una volta pieno il timer.
 
 **Modalità 2x8**  
 Questa è la modalità più semplice per usare il timer, **TMRx** è semplicemente diviso in **TMrxH** e **TMRxL**, la lettura chiaramente viene fatta un bit alla vota e il byte flag di interrupt viene alzato all' overflow di **TMRxH**  
@@ -565,9 +577,12 @@ void main() {
 
 ## ASSEMBLY  
 
+### Memoria e la suddivisione in banchi
+La memoria del microcontrollore è costituita da dei banchi di memoria in cui si trovano tutti i registri disponibili. Per una questione di bit, non viene utilizzata un'unica pagina di memoria piena di registri, ma si utilizzano 4 banchi.
+Da come si può vedere, questi banchi contengono dei registri ripetuti più volte. Infatti, questi sono i registri più comun. è molto comodo non cambiare banco ogni volta quando si vuole eseguire un'operazione con quei registri.
 
 ### STATUS register
-Lo STATUS è uno dei registri più importanti del microcontrollore. Esso contiene dei bit legati alle operazioni effettuate dall’ALU, il bit dello stato di RESET e i bit del controllo del paging dei banchi di memoria.
+Lo STATUS può essere definito come il registro più importante del microcontrollore. Esso contiene i bit legati alle operazioni effettuate dall’ALU, il bit dello stato di RESET e i bit del controllo del paging dei banchi di memoria.
 
 #### Quali istruzioni affliggono lo STATUS register?
 - Tutte le operazioni di addizione (ADDWF ADDLW), sottrazione (SUBWF SUBLW) affliggono i bit C (carry) DC (digit carry) Z (Zero bit)
@@ -733,7 +748,7 @@ EXT CLRF INDF	; pulisco il registro puntato utilizzando INDF (NON USARE FSR, NON
 
 **Premesse legate al datasheet del sonar e al datasheet del PIC**
 
-Il sonar in modalità capture viene visto sulla porta RC2 come input digitale. 
+Il sonar in modalità capture viene visto sulla porta RC2 come input digitale.
 
 L’interrupt del capture è PIRX.CCPXIF.
 
@@ -741,9 +756,9 @@ L’Enable si trova nel PIEx registro.
 
 Supponiamo di usare il CCP1CON, registro capture relativo al timer 1.
 
-**Come mai il risultato della conversione va diviso per 8?** <code>(width = width >> 3)</code> 
+**Come mai il risultato della conversione va diviso per 8?** <code>(width = width >> 3)</code>
 
-La nostra frequenza è 32MHz. Noi lavoriamo alla f del capture che è <code>( fosc/4 )= 8 MHz</code>. 
+La nostra frequenza è 32MHz. Noi lavoriamo alla f del capture che è <code>( fosc/4 )= 8 MHz</code>.
 
 La pendenza in modalità capture è <code>1mm = 1us</code> (vedi datasheet sonar).
 
@@ -801,21 +816,24 @@ Se quindi dobbiamo passare allo spazio tramite i livelli (che sono il risultato 
 
 <code> d = 4.88mm * a </code>
 
-<code>d = (5000/1024) * a * mm </code> 
+<code>d = (5000/1024) * a * mm </code>
 (posso scegliere l’unità di misura, da mm a metri ma sarebbe meno preciso)
 
-**se vogliamo tenere 4.88 a precisione massima dobbiamo tenere conto che lavoriamo su registri 16 bit.** 
+**se vogliamo tenere 4.88 a precisione massima dobbiamo tenere conto che lavoriamo su registri 16 bit.**
 
 <a href="https://imgbb.com/"><img src="https://i.ibb.co/fHN721P/microcontrolloriadc2.jpg" alt="microcontrolloriadc2" border="0"></a>
 
-Sapendo che 5 viene scritto con 3 bit 101 in binario. 
+Sapendo che 5 viene scritto con 3 bit 101 in binario.
 L’operazione da fare sarà fare divisioni e moltiplicazioni in modo da mantenere il risultato nei limiti dei 16 bit.
 
 In particolare sappiamo che i livelli a vanno da 0 a 1024, quindi occupano sempre 10 bit.
- 
+
 Abbiamo quindi massimo 5 bit liberi su cui lavorare (uno ce lo teniamo libero per essere sicuri di non fare errori di calcolo).
 
-Le operazioni da fare saranno, sapendo che 
+
+
+
+Le operazioni da fare saranno, sapendo che
 d= (5000/1024)*a
 
 E sapendo che <code>5000=2^3 * 5^4</code> e <code>1024=2^10</code>, a occupa sempre 10 bit allora: d= ((5^4)/(2^7) )*a
