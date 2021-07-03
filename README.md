@@ -4,8 +4,8 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:1 -->
 
 1. [Lezione 1 - GPIO](#lezione-1-gpio)
-	1. [USO PORT O LAT IN READ O WRITE?](#uso-port-o-lat-in-read-o-write)
-	1. [EASYPIC BOARD SETUP](#easypic-board-setup)
+   1. [USO PORT O LAT IN READ O WRITE?](#uso-port-o-lat-in-read-o-write)
+   2. [EASYPIC BOARD SETUP](#easypic-board-setup)
 2. [Lezione 2 - Timer 0](#lezione-2-timer-0)
 3. [Lezione 2 - TIMER1 modalità 16Bit vs 2*8](#lezione-2-timer1-modalit-16bit-vs-28)
 4. [Lezione 2 - LCD](#lezione-2-lcd)
@@ -13,17 +13,17 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 6. [Lezione 6 - ADC](#lezione-6-adc)
 7. [Lezione 7 - PWM](#lezione-7-pwm)
 8. [ASSEMBLY](#assembly)
-	1. [STATUS register](#status-register)
-		1. [Quali istruzioni affliggono lo STATUS register?](#quali-istruzioni-affliggono-lo-status-register)
-	2. [Salti e return in assembly](#salti-e-return-in-assembly)
-	3. [Direttive ASM](#direttive-asm)
-		1. [Differenze tra pseudo-istruzioni, macro, direttive](#differenze-tra-pseudo-istruzioni-macro-direttive)
+   1. [STATUS register](#status-register)
+      1. [Quali istruzioni affliggono lo STATUS register?](#quali-istruzioni-affliggono-lo-status-register)
+   2. [Salti e return in assembly](#salti-e-return-in-assembly)
+   3. [Direttive ASM](#direttive-asm)
+      1. [Differenze tra pseudo-istruzioni, macro, direttive](#differenze-tra-pseudo-istruzioni-macro-direttive)
 
 <!-- /TOC -->
 
 ## Lezione 1 - GPIO
 
-<a href="https://imgbb.com/"><img src="https://i.ibb.co/MGJ47Z2/Input-Output.jpg" alt="Input-Output" border="0"></a>
+![Input-Output](img/Input-Output.jpg)
 
 **NB:** tutti i pin sono settati in **Input di default**. Quando si setta un digital out scrivere sempre LATx=0 per reset.
 
@@ -33,9 +33,7 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 | Digital In  | TRISx.pin = 1 | ANSELx.pin = 0 |
 | Analog In   | TRISx.pin = 1 | ANSELx.pin = 1 |
 
-
 **NB**: se dei pin **non vengono definitivamente utilizzati** nel progetto, vengono settati come Output e poi il **LAT viene impostato a 0**. Questo previene switch (dovuti a cariche parassite accumulate) della porta che comportano consumo dovuto alla potenza dinamica di switching dell’ingresso.  
-
 
 Ogni port ha diversi registri:
 
@@ -46,18 +44,19 @@ Ogni port ha diversi registri:
 | LATx     | 0 = Writing low           | 1 = Writing high           | Undefined              |
 | ANSELx   | 0 = Digital buffer **ON** | 1 = Digital buffer **OFF** | Digital buffer **OFF** |
 
+### USO PORT O LAT IN READ O WRITE?
 
-##### USO PORT O LAT IN READ O WRITE?
 - **WRITE**: **LATx** e **PORTx** effettuano la stessa identica operazione di scrittura
 - **READ**: **PORTx** rappresenta lo stato fisico del pin, mentre **LATx** rappresenta il registro che pilota il data latch.  
 
 **Quando entrano in gioco i problemi?** Prendo per esempio **RB1** come digital Output. Faccio tutte le operazioni che mi pare con **PORTB.RB1** oppure **LATB.RB1** (non fa differenza).  
 Ora cambio **RB1** da digital Output a digital Input. Come risultato finale suppongo di avere **LATB.RB1=1**. Un bottone esterno impone ora il pin fisico con stato a 0. Se ora uso **PORTB.RB1**, leggo che effettivamente il pin è a zero. Se invece leggo LATB.RB1 mi ritrovo che il pin è a 1! Di conseguenza cosa devo usare?
+
 - **digital Input usare sempre e solo PORTB** in **READ**  
 - **digital Output** usare **PORTB** e **LATD** in **WRITE** a piacere
 
+### EASYPIC BOARD SETUP
 
-##### EASYPIC BOARD SETUP
 - **PORTA**: usata per aggiungere pulsanti e per fare polling. RA7-RA7 Connessi all'oscillatore.
 - **PORTB**: quasi interamente dedicata al LCD, attenzione che potrebbero venire usati RB6 e RB7 come pulsanti per interrupt on change (IOCB), IOCB disponibile da RB7-RB4, LCD connesso da RB5-RB0. **NB**: RB6 e RB7 vanno fuori uso con il debugger ON.
 - **PORTC**: poco spesso usata per altri scopi se non per il modulo sonar.
@@ -66,7 +65,7 @@ Ora cambio **RB1** da digital Output a digital Input. Come risultato finale supp
 
 ## Lezione 2 - Timer 0
 
-<a href="https://ibb.co/HnxzQXy"><img src="https://i.ibb.co/wMwW1Yq/timer0.jpg" alt="timer0" border="0"></a>
+![timer0](img/timer0.jpg)
 
 Il TIMER0 è un contatore che subisce un overflow (passaggio da valore massimo a zero) dopo un tempo definito dall'utente attraverso il setup dei registri dedicati.
 Si parte dalla selezione dell'oscillatore esterno o interno. Mediante un multiplexer possiamo selezionare la frequenza di incremento del contatore. **la nostra frequenza tipica è Fosc/4 in cui, grazie al PLL, Fosc è 32MHz (8MHz di default)**.
