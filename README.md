@@ -1,8 +1,6 @@
 ﻿# pic-notes
 
-Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
-
-<!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:1 -->
+Appunti del corso di microcontrollori, Politecnico di Milano, 2020-2021
 
 1. [Lezione 1 - GPIO](#lezione-1---gpio)
    1. [USO PORT O LAT IN READ O WRITE?](#uso-port-o-lat-in-read-o-write)
@@ -19,8 +17,6 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
    2. [Salti e return in assembly](#salti-e-return-in-assembly)
    3. [Direttive ASM](#direttive-asm)
       1. [Differenze tra pseudo-istruzioni, macro, direttive](#differenze-tra-pseudo-istruzioni-macro-direttive)
-
-<!-- /TOC -->
 
 ## Lezione 1 - GPIO
 
