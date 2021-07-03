@@ -630,7 +630,7 @@ Alcuni dei registri importanti in un PIC sono:
 ### Salti e return in assembly
 
 - `GOTO XXX`: Salto assoluto. Aggiorna il PC ad un’etichetta designata. La dimensione dell’indirizzo dell’etichetta è di 11 bit. È sensibile al paging, infatti il bit 12 e 13 vengono letti da **PCLATH**. Quindi sarà necessario usare l'istruzione `BANKSEL` oppure modificare il **PCH**. Nei PIC18 il PC è a 21 bit assoluti e il `GOTO` è a 20bit; quindi può spostare l'esecuzione ovunque in 2M di memoria (in due cicli), ma c’è il problema del paging con `PCLATU` (non più H)
-- `BRA XXX`: Salto relativo. Posso spostarmi di massimo +-1023 posizioni dall’indirizzo di partenza. Essendo un salto condizionale partendo dal valore del PC corrente, non è affetto dal paging (non è disponibile nei PIC16).
+- `BRA XXX`: Salto relativo. Posso spostarmi di massimo ±1023 posizioni dall’indirizzo di partenza. Essendo un salto condizionale partendo dal valore del PC corrente, non è affetto dal paging (non è disponibile nei PIC16).
 - `RETFIE`: specifica il return dall’interrupt (quindi sposta quello che c’era nel Top Of Stack nel PC) e riattiva il general interrupt GIE (che è stato disattivato all’ingresso della routine dell’interrupt).
 - `CALL`: va all’etichetta, esattamente come il goto, quindi è affetto da paging (USARE BANKSEL). Si salva nello stack il PC corrispondente alla posizione di chiamata. Appena la routine chiamata dal CALL, il PC viene rishiftato al chiamante.
 
@@ -655,8 +655,8 @@ Un processo alla base della scrittura di algoritmi per i neofiti della programma
 Pur essendo all'apparenza "troppo base e scontato", questo è un ottimo metodo sia per pensare all'algoritmo che per debuggare in caso di ricontrollo del codice!
 Facciamo immediatamente un esempio (tenendo a mente le istruzioni del PIC16):
 
-Vogliamo comparare due variabili ```PIPPO```  e ```PLUTO```, ponendo come condizione vera quando PIPPO è maggiore di PLUTO. In linguaggio C tutto ciò è intuitivo:
-```if (PIPPO > PLUTO)```. Ma nelle istruzioni del PIC16 non c'è il confronto maggiore o minore, **possiamo usare solo addizioni, sottrazioni e operazioni logiche o bit a bit**.  
+Vogliamo comparare due variabili `PIPPO` e `PLUTO`, ponendo come condizione vera quando `PIPPO` è maggiore di PLUTO. In linguaggio C tutto ciò è intuitivo:
+`if (PIPPO > PLUTO)`. Ma nelle istruzioni del PIC16 non c'è il confronto maggiore o minore, **possiamo usare solo addizioni, sottrazioni e operazioni logiche o bit a bit**.  
 Di conseguenza andiamo a scrivere un po' di pseudo codice utilizzando solo queste operazioni:  
 
 ``` pseudocode
