@@ -1,4 +1,5 @@
 ﻿# pic-notes
+
 Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:1 -->
@@ -23,7 +24,7 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 
 ## Lezione 1 - GPIO
 
-![Input-Output](img/Input-Output.jpg)
+![Input-Output](img/input_output.jpg)
 
 **NB:** tutti i pin sono settati in **Input di default**. Quando si setta un digital out scrivere sempre LATx=0 per reset.
 
@@ -82,14 +83,14 @@ La **frequenza di interrupt è frequenza d’ingresso (Fosc/4) diviso il prescal
 
 La configurazione con cui usiamo la nostra scheda è 32MHz. La frequenza di interrupt minima (che corrisponde al massimo tempo tra un interrupt e l’altro), è:  
 
-<code> **f_min = f_osc / ( 4 * 256 * ( 256 - TMR0L ) )** </code>
+```f_min = f_osc / ( 4 *256* ( 256 - TMR0L ))```
 
 Bisogna tenere conto del **valore di TMR0L** (il valore iniziale contenuto nel registro). Settando **TMR0L=0** siamo sicuri che il contatore parta a contare sempre da zero.  
 **Se vogliamo una frequenza di interrupt diversa da una potenza di 2** (vedi formula sopra), all'interno della routine di interrupt possiamo impostare TMR0L ad un valore diverso da zero.
 
 Il **tempo di interrupt** si ottiene semplicemente ribaltando la formula:  
 
-<code> **t_max = ( 4 * 256 * ( 256 - TMR0L ) ) / f_osc** </code>
+```t_max = ( 4 * 256 * ( 256 - TMR0L ) ) / f_osc```
 
 **4/32MHz = 1/8MHz corrispondono a 125 ns. Questo è fisso (a meno di disabilitare il PLL)**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente. Se si volesse avere più precisione ci sono 2 opzioni:
 - Salvare bene il valore del tempo di interrupt utilizzando un long int e tenendo per esempio in conto che ogni interrupt è 8192
