@@ -591,55 +591,80 @@ void main() {
 
 ### Memoria e la suddivisione in banchi
 
-La memoria del microcontrollore è costituita da dei banchi di memoria in cui si trovano tutti i registri disponibili. Per una questione di bit, non viene utilizzata un'unica pagina di memoria piena di registri, ma si utilizzano 4 banchi.
-Da come si può vedere, questi banchi contengono dei registri ripetuti più volte. Infatti, questi sono i registri più comun. è molto comodo non cambiare banco ogni volta quando si vuole eseguire un'operazione con quei registri.
+La memoria del microcontrollore è costituita da dei banchi di memoria in cui si trovano tutti i registri disponibili. Per una questione di indirizzamento, non viene utilizzata un'unica pagina di memoria piena di registri, ma si utilizzano 4 banchi separati.
+Da come si può vedere, questi banchi contengono dei registri ripetuti più volte. Infatti questi sono i registri più comuni, ed è molto comodo non cambiare banco ogni qual volta si vuole eseguire un'operazione con quei registri.
 
-### STATUS register
+### Registri importanti
 
-Lo STATUS può essere definito come il registro più importante del microcontrollore. Esso contiene i bit legati alle operazioni effettuate dall’ALU, il bit dello stato di RESET e i bit del controllo del paging dei banchi di memoria.
+Alcuni dei registri importanti in un PIC sono:
+
+- **PROGRAM COUNTER** *(PC)* è il registro che tiene traccia dell'indirizzo dell'istruzione corrente. È a sua volta composto da due registri, **PCL** e **PCH**. Normalmente incrementa di 1 ad ogni istruzione, ma può essere manipolato dalle istruzioni di branch.
+  - **PCL** contiene i bit da 0 7. È mappato in memoria ed è accessibile in lettura o in scrittura
+  - **PCH** contiene i bit da 8 a 12. Non è accessibilie direttamente in lettura o scrittura e deve essere manipolato tramite un meccanismo che coinvolge il registro **PCLATH**
+- **PCLATH** è il registro che fornisce i bit necessari all'istruzione di branch per effettuare il salto. I bit `<4:3>` vengono utilizzati nel **PCH** quando viene chiamata una istruzione `GOTO`.
+- **W** *(working register)* registro usato come operando nelle operazioni della ALU, sia come sorgente che come destinazione. Può anche essere manipolato direttamente poiché è mappato nella RAM.
+- **FSR** contiene l'indirizzo di memoria a cui punta il registro *INDF*. É mappato nella RAM.
+  - **INDF** è un registro virtuale che punta all'indirizzo contenuto in *FSR*. Può essere manipolato come un normale registro e viene usato per l'indirizzamento indiretto.
+- **OPTION** contiene vari bit di controllo per configurare:
+  - il *pull-up* della porta B (bit 7)
+  - l'*edge* dell'interrupt sulla porta B (*rising* o *falling*, bit 6)
+  - la sorgente del clock del TIMER 0 (transizione sul pin RA4/T0CKI o clock interno, bit 5)
+  - l'*edge* dell'interrupt sul pin RA4/T0CKI B (*rising* o *falling*, bit 4)
+  - il *prescaler* del TIMER 0 (bit 3)
+  - il *postscaler* del WATCHDOG (bit 2-0)
+- **STATUS** è il registro che può essere definito come il più importante del microcontrollore. Esso contiene i bit usati per:
+  - l'indirizzamento indiretto (bit 7, **IRP**)
+  - l'indirizzamento diretto  (bit 6-5, **RP1:RP0**)
+  - segnalare il *TIME OUT* (bit 4)
+  - segnalare il *POWER DOWN* (bit 3)
+  - segnalare se l'ultima operazione eseguita dalla ALU (aritmetica o logica) ha risultato zero (bit 2, **Z**)
+  - segnalare se c'è stato un carry **dal quarto bit in giù (quindi nel secondo nibble)** nell'ultima operazione eseguita dalla ALU (bit 1, **DC**)
+  - segnalare se c'è stato un carry nell'ultima operazione eseguita dalla ALU  (bit 0, **C**)
 
 #### Quali istruzioni affliggono lo STATUS register?
 
-- Tutte le operazioni di addizione (ADDWF ADDLW), sottrazione (SUBWF SUBLW) affliggono i bit C (carry) DC (digit carry) Z (Zero bit)
-- Le rotate left e rotate right (RLF RRF) affliggono il bit C (carry) perché ho bisogno di 1 bit da salvare da qualche parte mentre sto shiftando
+- Tutte le operazioni di *addizione* (`ADDWF ADDLW`), *sottrazione* (`SUBWF SUBLW`) affliggono i bit **C** (carry) **DC** (digit carry) **Z** (Zero bit)
+- Le *rotate left* e *rotate right* (`RLF RRF`) affliggono il bit **C** (carry) perché hanno bisogno di 1 bit da salvare per lo shift
 
-- Tutte le operazioni di incremento e decremento non condizionali affliggono il bit Z
-- Le operazioni logiche ANDWF CLEARF CLEARW COMF IORWF MOVF XORWF ANDLW IORLW  XORLW affliggono il bit Z
+- Tutte le operazioni di *incremento* e *decremento* non condizionali affliggono il bit **Z**
+- Le operazioni logiche `ANDWF CLEARF CLEARW COMF IORWF MOVF XORWF ANDLW IORLW XORLW` affliggono il bit **Z**
+
 - Tutte le operazioni rimanenti non affliggono lo status (esempio lo swap dei nibbles)
 
 ### Salti e return in assembly
 
-- **`GOTO XXX`**: Salto assoluto. Aggiorna il PC ad un’etichetta designata. La dimensione dell’indirizzo dell’etichetta è di 11 bit È sensibile al paging, infatti il bit 12 e 13 vengono acchiappati da PCLATH. Quindi usare BANKSEL. Nei PIC18 il PC è a 21 bit assoluti, il goto è a 20bit quindi può spostarti ovunque in 2M di memoria (in due cicli), ma c’è il problema del paging con PCLATU (non più H)
-- **`BRA XXX`**: Salto relativo. Posso spostarmi di massimo +-1023 posizioni dall’indirizzo di partenza. Essendo un salto condizionale partendo dal valore del PC corrente, non è affetto dal paging (non è disponibile nei PIC16).
-- **`RETFIE`**: specifica il return dall’interrupt (quindi sposta quello che c’era nel Top Of Stack nel PC) e riattiva il general interrupt GIE (che è stato disattivato all’ingresso della routine dell’interrupt).
-- **`CALL`**: va all’etichetta, esattamente come il goto, quindi è affetto da paging (USARE BANKSEL). Si salva nello stack il PC corrispondente alla posizione di chiamata. Appena la routine chiamata dal CALL, il PC viene rishiftato al chiamante.
+- `GOTO XXX`: Salto assoluto. Aggiorna il PC ad un’etichetta designata. La dimensione dell’indirizzo dell’etichetta è di 11 bit. È sensibile al paging, infatti il bit 12 e 13 vengono letti da **PCLATH**. Quindi sarà necessario usare l'istruzione `BANKSEL` oppure modificare il **PCH**. Nei PIC18 il PC è a 21 bit assoluti e il `GOTO` è a 20bit; quindi può spostare l'esecuzione ovunque in 2M di memoria (in due cicli), ma c’è il problema del paging con `PCLATU` (non più H)
+- `BRA XXX`: Salto relativo. Posso spostarmi di massimo +-1023 posizioni dall’indirizzo di partenza. Essendo un salto condizionale partendo dal valore del PC corrente, non è affetto dal paging (non è disponibile nei PIC16).
+- `RETFIE`: specifica il return dall’interrupt (quindi sposta quello che c’era nel Top Of Stack nel PC) e riattiva il general interrupt GIE (che è stato disattivato all’ingresso della routine dell’interrupt).
+- `CALL`: va all’etichetta, esattamente come il goto, quindi è affetto da paging (USARE BANKSEL). Si salva nello stack il PC corrispondente alla posizione di chiamata. Appena la routine chiamata dal CALL, il PC viene rishiftato al chiamante.
 
 ### Direttive ASM
 
-- **`\#include`**: tale e quale a C++. Si usa con #include <p18f452.inc>
-- **UDATA**: dichiara l’inizio di una sezione di dati non inizializzati. Per riservare lo spazio in questa sezione bisogna utilizzare la direttiva RES. L’utilizzo è “LABEL res #byte”.Se non vengono specificate label e indirizzo, (es VARIABLES_IN_BANK udata 0x20) si scrive .udata e il linker fa tutto da sé.
-- **`BANKSEL XXX`**: Serve per selezionare automaticamente il bank in base all’etichetta desiderata. Quindi se voglio selezionare un TRISB e non so dove sono, scrivo BANKSEL TRISB. Questo mi permette di poter mettere (con le dovute precauzioni della scelta del micro) lo stesso codice su un altro micro senza preoccuparmi del Bank da selezionare.
-- **`CODE XXXX`**: (indirizzo opzionale) significa che il linker può piazzare il codice nella program memory all’indirizzo specifico XXXX segnalato dall’utente, oppure viene lasciata libera la scelta dell’indirizzo al linker se XXXX non viene specificato.
-- **`END`**: specifica all’assembler che questa è la fine del file asm. Ogni file asm deve necessariamente finire con la direttiva END. Se così non fosse, l’assembler continuerebbe a passare tutta la memoria.
-- **equ**: analogo del define del c++. Si scrive come “MYPORT equ PORTD” (etichetta eq nome_indirizzo_in_RAM).
+- `#include`: tale e quale a C++. Esempio: `#include <p18f452.inc>`
+- `UDATA`: dichiara l’inizio di una sezione di dati non inizializzati. Per riservare lo spazio in questa sezione bisogna utilizzare la direttiva RES. L’utilizzo è `LABEL res #byte`. Se non vengono specificate label e indirizzo, (es `VARIABLES_IN_BANK udata 0x20`) si scrive .udata e il linker fa tutto da sé.
+- `BANKSEL XXX`: Serve per selezionare automaticamente il bank in base all’etichetta desiderata. Quindi se voglio selezionare un TRISB e non so dove sono, scrivo BANKSEL TRISB. Questo mi permette di poter mettere *(con le dovute precauzioni della scelta del micro)* lo stesso codice su un altro micro senza preoccuparmi del Bank da selezionare.
+- `CODE XXXX`: (indirizzo opzionale) significa che il linker può piazzare il codice nella program memory all’indirizzo specifico XXXX segnalato dall’utente, oppure viene lasciata libera la scelta dell’indirizzo al linker se il parametro non viene specificato.
+- `END`: specifica all’assembler che questa è la fine del file asm. Ogni file asm deve necessariamente finire con la direttiva `END`. Se così non fosse, l’assembler continuerebbe a passare tutta la memoria.
+- `EQU`: analogo del define del C++. Esempio: `MYPORT equ PORTD` (etichetta eq nome_indirizzo_in_RAM).
 
 #### Differenze tra pseudo-istruzioni, macro, direttive
 
 - **Direttiva**: una direttiva assembly è un comando utilizzato a livello software che compare nel source code ma non è direttamente traducibile come opcode. Di conseguenza una direttiva non compare nell’instruction set del datasheet del PIC ma nella User’s guide del MPASM™ Assembler.
-- **Pseudo-istruzione**: istruzione ASM scritta con parole diverse in modo tale da agevolare la memorizzazione. Per esempio, nel PIC16 , c’è `MOVWF`, mentre la sua “complementare” dovrebbe essere `MOVFW`. Nelle istruzioni del datasheet però esiste solo `MOVF, w`. L’assemblatore via software permette di tradurre direttamente `MOVF,w` tramite la pseudo-istruzione `MOVFW`, in modo tale da avere meno confusione nel codice e migliore memorizzazione.
-- **Macro**: può essere considerata come “un’istruzione” a livello di sviluppo software, ma in realtà è **un gruppo di istruzioni unificate sotto un unico nome**. A differenza delle funzioni in linguaggio C, la macro è una sostituzione **in-line**. Questo significa che non viene effettuata una call, non viene cambiato il PC, non viene allocato spazio nello stack. Il contenuto della macro viene semplicemente inserito in quel punto del programma. Per l’utilizzo leggi la User’s guide del MPASM™ Assembler.
+- **Pseudo-istruzione**: istruzione ASM scritta con parole diverse in modo tale da agevolare la memorizzazione. Per esempio, nel PIC16 , c’è `MOVWF`, mentre la sua “complementare” dovrebbe essere `MOVFW`. Nelle istruzioni del datasheet però esiste solo `MOVF, w`. L’assemblatore via software permette di tradurre direttamente `MOVF, w` tramite la pseudo-istruzione `MOVFW`, in modo tale da avere meno confusione nel codice e migliore memorizzazione.
+- **Macro**: può essere considerata come “un’istruzione” a livello di sviluppo software, ma in realtà è **un gruppo di istruzioni unificate sotto un unico nome**. A differenza delle funzioni in linguaggio C, la macro è una sostituzione **in-line**. Questo significa che non viene effettuata una call, non viene cambiato il PC, non viene allocato spazio nello stack. Il contenuto della macro viene semplicemente inserito in quel punto del programma. Per maggiori informazioni, leggere la User’s guide del MPASM™ Assembler.
 
 ### Scrivere programmi in pseudo codice
 
-Un processo alla base della scrittura di algoritmi per i neofiti della programmazione è **lo sviluppo iniziale in pseudo-codice** .  
-Pur essendo all'apparenza "troppo base e scontato", questo è un ottimo metodo sia per pensare all'algoritmo che per debuggare in caso di ricontrollo del codice.  
+Un processo alla base della scrittura di algoritmi per i neofiti della programmazione è lo sviluppo iniziale in pseudo-codice.
+Pur essendo all'apparenza "troppo base e scontato", questo è un ottimo metodo sia per pensare all'algoritmo che per debuggare in caso di ricontrollo del codice!
 Facciamo immediatamente un esempio (tenendo a mente le istruzioni del PIC16):
 
 Vogliamo comparare due variabili ```PIPPO```  e ```PLUTO```, ponendo come condizione vera quando PIPPO è maggiore di PLUTO. In linguaggio C tutto ciò è intuitivo:
-```if(PIPPO>PLUTO)```. Ma nelle istruzioni del PIC16 non c'è il confronto maggiore o minore, **possiamo usare solo addizioni, sottrazioni e operazioni logiche o bit a bit**.  
+```if (PIPPO > PLUTO)```. Ma nelle istruzioni del PIC16 non c'è il confronto maggiore o minore, **possiamo usare solo addizioni, sottrazioni e operazioni logiche o bit a bit**.  
 Di conseguenza andiamo a scrivere un po' di pseudo codice utilizzando solo queste operazioni:  
 
-```prendi risultato
+``` pseudocode
+prendi risultato
 carica PIPPO su risultato   
 sottrai PLUTO a risultato   
 ...   
@@ -651,82 +676,77 @@ se risultato è positivo
 ```
 
 Ora dobbiamo convertire tutto questo pseudo codice in qualcosa che il compilatore può capire.  
-**In questo esempio ci sono due criticità** :  
+**In questo esempio ci sono due criticità**:  
 
-1. è necessario avere un'ulteriore variabile risultato -> **uso il working register**
-2. devo controllare il segno di risultato -> lo **STATUS** contiene il bit carry che viene portato a 1 nel caso un'operazione restituisca una variabile negativa
+1. è necessario avere un'ulteriore variabile risultato -> uso il working register `w`
+2. devo controllare il segno di risultato -> il registro `STATUS` contiene il bit carry (che viene portato a 1 nel caso in cui un'operazione restituisca una variabile negativa)
 
 Vado dunque a scrivere il codice:
 
-``` C
-MOVFW PIPPO ; sposto PIPPO nel working
-SUBFW PLUTO ; sottraggo PLUTO al working
-BANKSEL STATUS ; vado a selezionare il bank in cui sta STATUS
+``` ASM
+MOVFW PIPPO; sposto PIPPO nel working register
+SUBFW PLUTO; sottraggo PLUTO al working register
+BANKSEL STATUS; vado a selezionare il bank in cui sta STATUS
 BTFSS STATUS, c; Se PIPPO-PLUTO<0  ALLORA SKIPPA
-GOTO PIPPO_MAGGIORE  ;se il bit test non non skippa allora PIPPO è maggiore
+GOTO PIPPO_MAGGIORE; se il bit test non non skippa allora PIPPO è maggiore
 GOTO PIPPO_MINORE; se il bit test skippa allora PIPPO è minore
-
 ```
 
 ### Cosa deve essere salvato durante una IRQ (Interrupt request routine)
 
-``` C
-MOVWF W_TEMP ;Copy W to TEMP register, could be bank one or zero
-SWAPF STATUS,W ;Swap status to be saved into W
-CLRF STATUS ;bank 0, regardless of current bank, Clears IRP,RP1,RP0
-MOVWF STATUS_TEMP ;Save status to bank zero STATUS_TEMP register
+``` ASM
+MOVWF W_TEMP; Copia il contenuto di W nel registro TEMP, nel banco 1 o 0
+SWAPF STATUS, W; Salva il registro status in W
+CLRF STATUS; indipendentemente dalla pagina, cancella IRP, RP1, RP0 nel banco 0
+MOVWF STATUS_TEMP; Salva il registro status nel registro STATUS TEMP nel banco 0
 
-MOVF PCLATH, W ;Only required if using pages 1, 2 and/or 3
-MOVWF PCLATH_TEMP ;Save PCLATH into W
-CLRF PCLATH ;Page zero, regardless of current page
+MOVF PCLATH, W; Necessario nel caso si usi il banco 1, 2 o 3
+MOVWF PCLATH_TEMP; Salva PCLATH in W
+CLRF PCLATH; Pagina zero, indipendentemente dalla pagina attuale
 
-BCF STATUS, IRP ;Return to Bank 0
-MOVF FSR, W ;Copy FSR to W
-MOVWF FSR_TEMP ;Copy FSR from W to FSR_TEMP
+BCF STATUS, IRP; Ritorna al banco 0
+MOVF FSR, W; Copia FSR in W
+MOVWF FSR_TEMP; Copia FSR da W a FSR_TEMP
 
 : ;abbiamo salvato tutto quanto
-:(ISR)
+: (ISR)
 : ;dopo la routine di interrupt andiamo a ricaricare i salvataggi
 
-MOVF PCLATH_TEMP, W ;Restore PCLATH
-MOVWF PCLATH ;Move W into PCLATH
-SWAPF STATUS_TEMP,W ;Swap STATUS_TEMP register into W
-;(sets bank to original state)
+MOVF PCLATH_TEMP, W; Recupera PCLATH
+MOVWF PCLATH; Muove W in PCLATH
+SWAPF STATUS_TEMP, W; Scambia il registro STATUS_TEMP con W
+; (resetta il banco allo stato originario)
 
-MOVWF STATUS ;Move W into STATUS register
+MOVWF STATUS; Sposta W nel registro STATUS
 
-SWAPF W_TEMP,F ;Swap W_TEMP
-SWAPF W_TEMP,W ;Swap W_TEMP into W
+SWAPF W_TEMP, F; Inverte W_TEMP con F
+SWAPF W_TEMP, W; Inverte W_TEMP con W
 ```
 
 pag 143 datasheet pic77 (vedi pag 40 per leggere dello stack)
 
 ### Stringa di configurazione della CPU  
 
-**_CONFIG**      parola inizio configurazione  
+- `_CONFIG`: parola inizio configurazione  
+- `_FOSC_XT`: selezione oscillatore (XT: cristallo)
+- `_WDTE_OFF`: watch dog (inattivo)
+- `_PWRTE_ON`: delay per alimentazione stabile uC all’accensione (acceso)  
+- `_CP_OFF`: code protection (inattivo)  
+- `_BOREN_ON`: brown out detect (attivo), se la tensione scende sotto una soglia (es alimentazione da batteria che si scarica) per evitare processi errati all’interno del uC, il `brown out resetta e tiene resettato il uC continuamente`
 
-**_FOSC_XT &**    selezione oscillatore (XT: cristallo)
+### Codice di esempio con loop infinito  
 
-**_WDTE_OFF &**   watch dog (inattivo)
+Questo codice contiene l'inizio del file asm che deve essere sempre inserito:
 
-**_PWRTE_ON &**  delay per alimentazione stabile uC all’accensione (acceso)  
-
-**_CP_OFF &**     code protection (inattivo)  
-
-**_BOREN_ON**    brown out detect (attivo), se la tensione scende sotto una soglia (es alimentazione da batteria che si scarica) per evitare processi errati all’interno del uC, il **brown out resetta e tiene resettato il uC continuamente**
-
-### Coice di esempio con loop infinito  
-
-Questo codice contiene l'inizio del file asm che deve essere sempre inserito
-
-``` C
+``` ASM
 _CONFIG _FOSC_XT & _PWRTE_ON & _CP_OFF & _BOREN_ON
 GENERATOR
-RES_VECT CODE 0x0000 ; processor reset vector
-GOTO START ; go to beginning of
-program
+RES_VECT CODE 0x0000; processor reset vector
+GOTO START; go to beginning of program
+
 ; TODO ADD INTERRUPTS HERE IF USED
-MAIN_PROG CODE ; let linker place main program
+
+MAIN_PROG CODE; let linker place main program
 START
 GOTO $ ; loop forever
 END
@@ -736,27 +756,27 @@ END
 
 1. **Diretto**: **l’indirizzo della RAM è direttamente contenuto nell’opcode**, quindi l’indirizzo viene dall’instruction register (che contiene l’opcode appena ricavato dal PC)  
 
-2. **Indiretto**: **l’indirizzo della RAM è già contenuto nel FSR**(File Select Register), di conseguenza l’opcode non deve contenere direttamente l’indirizzo nell’ISR ma il suo “indice” (come un puntatore). **Può essere utilizzato per non dover riscrivere miliardi di volte lo stesso codice per indirizzi diversi** (tipo clear indirizzo 1, clear indirizzo 2, clear indirizzo 3). Mi basta incrementare il FSR e ripeto la stessa routine tot volte.
+2. **Indiretto**: **l’indirizzo della RAM è già contenuto nel FSR** (File Select Register), di conseguenza l’opcode non deve contenere direttamente l’indirizzo nell’ISR ma il suo “indice” (come un puntatore). **Può essere utilizzato per non dover riscrivere più volte lo stesso codice per indirizzi diversi.** Ad esempio, al posto di `clear indirizzo1; clear indirizzo2; clear indirizzo3;`. basta incrementare il FSR e ripetere la stessa routine il numero necessario di volte.
 
 ### Codice d'esempio sull'utilizzo di un FOR con FSR/INDF
 
-``` asm
-CLRF 20h ; clear data at adress 20h
-CLRF 21h ; clear data at adress 21h
+``` ASM
+CLRF 20h; cancella i dati all'indirizzo 20h
+CLRF 21h; cancella i dati all'indirizzo 21h
 :
 :
-CLRF 30h ; clear data at adress 30h
+CLRF 30h; cancella i dati all'indirizzo 30h
 ```
 
-Come possiamo ottimizzare questa lunga scrittura ripetitiva e brutta da vedere? Vediamo come fare con FSR e INDF
+Come possiamo ottimizzare questa lunga sezione di codice? Vediamo come fare con FSR e INDF:
 
-``` asm
-  MOVLW 0x20   ; Sposto l'indirizzo di partenza in W
-  MOVWF FSR  ; lo butto nel FSR
-EXT CLRF INDF  ; pulisco il registro puntato utilizzando INDF (NON USARE FSR, NON È SCRIVIBILE)
-  INCF FSR, f  ; incremento FSR -> vado da 20h a 21h
-  BTFSS FSR, 5 ; il bit 5 è a 1? Allora sono passato a 3xh (in cui la x sta per una cifra qualsiasi) quindi nel nostro caso 30h
-  GOTO NEXT    ; se non siamo ancora a 30h continua a pulire
+``` ASM
+MOVLW 0x20; Sposto l'indirizzo di partenza in W
+MOVWF FSR; lo sposto nel FSR
+EXT CLRF INDF; pulisco il registro puntato utilizzando INDF 
+INCF FSR, f; incremento FSR
+BTFSS FSR, 5; il bit 5 è a 1? Allora sono passato a 3xh (in cui la x sta per una cifra qualsiasi) quindi nel nostro caso 30h
+GOTO NEXT; se non siamo ancora a 30h continua il loop - nota che questa istruzione non viene eseguita se la precedente istruzione è vera
 ```
 
 ## PIC 16
