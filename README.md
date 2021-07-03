@@ -4,8 +4,8 @@ Appunti del corso di microcontrollori, Politecnico di Milano, 2018-19
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:1 -->
 
 1. [Lezione 1 - GPIO](#lezione-1-gpio)
-			NaN. [USO PORT O LAT IN READ O WRITE?](#uso-port-o-lat-in-read-o-write)
-			NaN. [EASYPIC BOARD SETUP ( usi tipici delle PORTx )](#easypic-board-setup-usi-tipici-delle-portx-)
+	1. [USO PORT O LAT IN READ O WRITE?](#uso-port-o-lat-in-read-o-write)
+	1. [EASYPIC BOARD SETUP](#easypic-board-setup)
 2. [Lezione 2 - Timer 0](#lezione-2-timer-0)
 3. [Lezione 2 - TIMER1 modalità 16Bit vs 2*8](#lezione-2-timer1-modalit-16bit-vs-28)
 4. [Lezione 2 - LCD](#lezione-2-lcd)
@@ -57,7 +57,7 @@ Ora cambio **RB1** da digital Output a digital Input. Come risultato finale supp
 - **digital Output** usare **PORTB** e **LATD** in **WRITE** a piacere
 
 
-##### EASYPIC BOARD SETUP ( usi tipici delle PORTx per il corso di microcontrollori)
+##### EASYPIC BOARD SETUP
 - **PORTA**: usata per aggiungere pulsanti e per fare polling. RA7-RA7 Connessi all'oscillatore.
 - **PORTB**: quasi interamente dedicata al LCD, attenzione che potrebbero venire usati RB6 e RB7 come pulsanti per interrupt on change (IOCB), IOCB disponibile da RB7-RB4, LCD connesso da RB5-RB0. **NB**: RB6 e RB7 vanno fuori uso con il debugger ON.
 - **PORTC**: poco spesso usata per altri scopi se non per il modulo sonar.
