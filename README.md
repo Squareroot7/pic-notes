@@ -93,17 +93,19 @@ Il **tempo di interrupt** si ottiene semplicemente ribaltando la formula:
 ```t_max = ( 4 * 256 * ( 256 - TMR0L ) ) / f_osc```
 
 **4/32MHz = 1/8MHz corrispondono a 125 ns. Questo è fisso (a meno di disabilitare il PLL)**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente. Se si volesse avere più precisione ci sono 2 opzioni:
+
 - Salvare bene il valore del tempo di interrupt utilizzando un long int e tenendo per esempio in conto che ogni interrupt è 8192
 - sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler. Per esempio, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi**. Questa impostazione deve essere inserita sempre all'interno della routine di interrupt e nelle prime righe di setup del codice così da avere:
-	- il valore iniziale impostato correttamente all'accensione del micro
-	- ogni volta che il timer va in overflow resettiamo la conta al valore iniziale voluto
+  - il valore iniziale impostato correttamente all'accensione del micro
+  - ogni volta che il timer va in overflow resettiamo la conta al valore iniziale voluto
 
+## Lezione 2 - TIMER1 modalità 16Bit vs 2*8
 
-## Lezione 2 - TIMER1 modalità 16Bit vs 2*8  
 **NB:** solo i timer di indice pari possono essere a 8 bit (TIMER2,TIMER4).  
 Però notiamo che all'interno del registro TxCON è presente un bit (TxRD16) che parla di **modalità 16bit o 2x8**.  
 
 È certamente possibile utilizzare i timer di indice dispari a 8 bit, ma è necessaria una delle seguenti manovre:
+
 - essendo il timer a 16 bit, usiamo solo gli 8 bit più significativi in modo tale da poter comunque sfruttare l'overflow una volta pieno il timer.
 
 **Modalità 2x8**  
@@ -116,31 +118,35 @@ Procediamo con la lettura di **TMR1L**, salviamo il dato in una variabile, risul
 A questo punto leggiamo il Byte alto, ma il timer non è stato spento, ed è andato avanti nel conteggio: **MR1L=0x00 TMR1H=0x01**
 Il programma procede a leggere il Byte successivo e il risultato sarà pari a
 
-<code>**0x00FF + 0x0100 = 0x01FF** </code>
+``` 0x00FF + 0x0100 = 0x01FF ```
 
 diverso sostanzialmente da 0x00FF che avremmo dovuto ottenere.
 
-**Facciamo un esempio di lettura nell' altro senso:**
+**Facciamo un esempio di lettura nell' altro senso:**`
+
 1. TMR1=0x00FF
 2. leggo TMR1H -> Res sarà 0x0000;
 3. il timer conta -> TMR1= 0x0100;
 4. Leggo TMR1L -> Res sarà 0x0000; =/= 0x00FF che ci aspettavamo.
 
 **Quando allora questa modalità è utile?**
--	Quando non ci interessa il contenuto del timer ma solo l'overflow
--	Quando ci interessa un solo byte del timer che sia H o L ( utile ad esempio in un **PWM software**, vedi gli appunti più avanti)
+
+-Quando non ci interessa il contenuto del timer ma solo l'overflow
+-Quando ci interessa un solo byte del timer che sia H o L ( utile ad esempio in un **PWM software**, vedi gli appunti più avanti)
 
 Per correggere questo problema è stato introdotta l'altra modalità
 **1x16**.
 La modalità che chiameremo **1x16** viene chiamata ufficialmente **16Bit** read/Write e quello che fa di fatto è **introdurre un buffer su TMR1H:**
 Il byte alto del timer a questo punto **non sarà più direttamente controllabile o leggibile** ( lo chiameremo **TMR1H**), ma potremo accedere solamente al buffer( di fatto il PIC sposta fisicamente l'idirizzo, quindi a livello di codice noi accediamo lo stesso registro)
 **Il buffer viene copiato** quando viene toccato **TMR1L**:
--	Leggo **TMR1L** -> **contemporaneamente TMR1H** verrà copiato in **TMR1H**, in questo modo il dato è salvato in sincronia, e anche se viene letto successivamente il conteggio del timer non lo influisce.
--	Scrivo **TMR1H** -> nello stesso istante viene copiato **TMR1H** in **TMR1H**, il caricamento del valore iniziale viene fatto in sincronia e non c'è rischio di problemi in caricamento.
+
+-Leggo **TMR1L** -> **contemporaneamente TMR1H** verrà copiato in **TMR1H**, in questo modo il dato è salvato in sincronia, e anche se viene letto successivamente il conteggio del timer non lo influisce.
+-Scrivo **TMR1H** -> nello stesso istante viene copiato **TMR1H** in **TMR1H**, il caricamento del valore iniziale viene fatto in sincronia e non c'è rischio di problemi in caricamento.
 
 **Problemi relativi a questo:**
--	Se devo accedere solo a **TMR1H** Devo per forza leggere **TMR1L**, perdendo di fatto tempo.
--	Se dovessi sbagliare l'ordine di lettura/scrittura otterrei dati/funzionamento non valido.
+
+-Se devo accedere solo a **TMR1H** Devo per forza leggere **TMR1L**, perdendo di fatto tempo.
+-Se dovessi sbagliare l'ordine di lettura/scrittura otterrei dati/funzionamento non valido.
 
 ## Lezione 2 - LCD
 
@@ -157,7 +163,7 @@ Attenzione anche allo switch pin 6 (dallo schema e che dovrebbe essere già sett
 
 C’è una parte di codice fissa da impostare se vuoi accendere l’LCD:
 
-```
+``` C
 // Lcd module connections
 sbit LCD_RS at LATB4_bit;
 sbit LCD_EN at LATB5_bit;
@@ -194,16 +200,16 @@ Quando dichiariamo queste stringhe in C dobbiamo usare per forza quello che si c
 
 Riguardo all’LCD all’esame c'è il **file con la intestazione e la manipolazione base della stringhe**.
 
-Vediamo come mai posso **rischiare di entrare due volte nella ISR dato un interrupt on change** .    
+Vediamo come mai posso **rischiare di entrare due volte nella ISR dato un interrupt on change**.
 Premo un bottone. Il valore logico di tensione che è fisicamente su PORTB hardware è 1 perché io sto premendo il bottone -> **XOR=1** -> scatta l'interrupT -> **RBIF=1**, il main si ferma ed entriamo in ISR.  
 Ora che siamo nella ISR **INTCON.RBIF==1** ? Sì, la flag è partita alla pressione del bottone.
 
-<a href="https://ibb.co/Sy6qrSY"><img src="https://i.ibb.co/W5HStC8/RBIF.jpg" alt="RBIF" border="0"></a>
+![RBIF](img/RBIF.jpg)
 
 Se ora resetto subito la flag ma non faccio nessuna lettura della **PORTB**, la **XOR** è ancora a 1, il PIC rialza la flag: questo perché la Q del flip flop non è stata cambiata (non ho letto niente ancora), è ancora 0, ma su **PORTB** il pulsante è ancora premuto quindi c’è un mismatch e l’uscita dello XOR è ancora 1. Ma quindi, dato che la flag è ancora alta, appena esco dal primo ISR rientro subito ed eseguo ISR una seconda volta, tutto questo mentre io sto ancora premendo il pulsante. Ancora una volta INTCON.RBIF==1, resetto la flag alla prima riga della ISR ma la seconda volta non è più vero che c’è il mismatch perché l’uscita del flip flop è stata aggiornata dalla ISR precedente (abbiamo fatto una read sulla PORTB tramite la condizione if (PORTB.RB6) appena dopo aver buttato giù la flag). L’uscita della XOR ora è a 0 e non rientrerò più nel ISR.
 Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORTB mi frego e rientro due volte nella stessa ISR ad ogni pressione del pulsante dell’interrupt on change.
 
-```
+``` C
   // ******ISR SCORRETTO******
   void interrupt(){
     if(INTCON.RBIF){ //flag alzata da PORTB
@@ -225,21 +231,21 @@ Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORT
   }
 ```
 
-
 ## Lezione 4 - CCP (Sonar)
 
 <a href="https://imgbb.com/"><img src="https://i.ibb.co/PYnXSGL/capture.jpg" alt="capture" border="0"></a>
 
 Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da ricordare sono principalmente:  
-1.	Il sonar è collegato a **PORTC**. Se il sonar viene utilizzato in modalità **Pulse Width Output**, devo impostare **RC2 digital Input**  (ANSELC=0 TRISC=1); sennò uso **RC3** come **Analog Input** -> è necessario usare l’**ADC**.
-2.	Il sonar si appoggia al Timer **TXCON** change sovrascrive i dati nel registro del capture **CCPXCON** da 16 bit, suddiviso nei registri **CCPXH** e **CCPXL** (8 bit), high e low rispettivamente. I timer dispari vengono usati **Capture and Compare** mentre per i timer pari vengono usati per il **PWM**. Si imposta il timer con il registro **CCPTMRS0**.
-3.	È una periferica del uC, quindi per attivarne l’interrupt **INTCON.PEIE=1** (non dimenticare il general **INTCON.GIE=1**)
-4.	L’attivazione degli interrupt non è solo legata al registro **INTCON** ma anche ai registri **PIEX** e **PIRX**. Bisogna cercare il numero corretto del registro a cui sostituire la X. **Esistono cinque registri per gli interrupt**.
-5.	Se vuoi lo stream continuo dei dati imposta **LATC.RC6=1**, inoltre deve essere digital Output, quindi TRISC del bit 6 è alto sempre; Gli altri bit si possono mettere benissimo in modalità Input, in particolare **RC2** o **RC3** (digial/analog)
-6.	Non dimenticare la routine di interrupt che è sempre identica:
+
+1. Il sonar è collegato a **PORTC**. Se il sonar viene utilizzato in modalità **Pulse Width Output**, devo impostare **RC2 digital Input**  (ANSELC=0 TRISC=1); sennò uso **RC3** come **Analog Input** -> è necessario usare l’**ADC**.
+2. Il sonar si appoggia al Timer **TXCON** change sovrascrive i dati nel registro del capture **CCPXCON** da 16 bit, suddiviso nei registri **CCPXH** e **CCPXL** (8 bit), high e low rispettivamente. I timer dispari vengono usati **Capture and Compare** mentre per i timer pari vengono usati per il **PWM**. Si imposta il timer con il registro **CCPTMRS0**.
+3. È una periferica del uC, quindi per attivarne l’interrupt **INTCON.PEIE=1** (non dimenticare il general **INTCON.GIE=1**)
+4. L’attivazione degli interrupt non è solo legata al registro **INTCON** ma anche ai registri **PIEX** e **PIRX**. Bisogna cercare il numero corretto del registro a cui sostituire la X. **Esistono cinque registri per gli interrupt**.
+5. Se vuoi lo stream continuo dei dati imposta **LATC.RC6=1**, inoltre deve essere digital Output, quindi TRISC del bit 6 è alto sempre; Gli altri bit si possono mettere benissimo in modalità Input, in particolare **RC2** o **RC3** (digial/analog)
+6. Non dimenticare la routine di interrupt che è sempre identica:
 
 
-```
+``` C
 if(PIR1.CCP1IF){
   if(CCP1CON.CCP1M0){	          // If we are sensing the Rising-Edge
     ta = ( CCPR1H << 8 ) + CCPR1L; // merge 8 and 8 bit in 16 bit
