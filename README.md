@@ -2,26 +2,25 @@
 
 Appunti del corso di microcontrollori, Politecnico di Milano, 2020-2021.
 
+Documento originariamente creato da [Squareroot7](https://github.com/Squareroot7/pic-notes)
+
 Indice creato con [github-markdown-toc](https://github.com/ekalinin/github-markdown-toc)
 
+Table of Contents
+
+=================
+
 * [pic-notes](#pic-notes)
-  * [Lezione 1 - GPIO](#lezione-1---gpio)
-    * [USO PORT O LAT IN READ O WRITE?](#uso-port-o-lat-in-read-o-write)
-      * [EASYPIC BOARD SETUP](#easypic-board-setup)
-  * [Lezione 2 - Timer 0](#lezione-2---timer-0)
-  * [Lezione 2 - TIMER1 modalità 16Bit vs 28](#lezione-2---timer1-modalità-16bit-vs-28)
-  * [Lezione 2 - LCD](#lezione-2---lcd)
-  * [Lezione 4 - CCP (Sonar)](#lezione-4---ccp-sonar)
-    * [Cosa succede se TIMER1 va in overflow più volte durante una misura di CCP?](#cosa-succede-se-timer1-va-in-overflow-più-volte-durante-una-misura-di-ccp)
-  * [Lezione 6 - ADC](#lezione-6---adc)
-  * [Lezione 7 - PWM](#lezione-7---pwm)
+  * [Numeri binari](#numeri-binari)
+    * [Endianness](#endianness)
+    * [Complementi](#complementi)
   * [ASSEMBLY](#assembly)
     * [Memoria e la suddivisione in banchi](#memoria-e-la-suddivisione-in-banchi)
     * [Registri importanti](#registri-importanti)
       * [Quali istruzioni affliggono lo STATUS register?](#quali-istruzioni-affliggono-lo-status-register)
     * [Struttura del codice](#struttura-del-codice)
     * [Salti e return in assembly](#salti-e-return-in-assembly)
-    * [Direttive ASM](#direttive-asm)
+    * [Direttive asm](#direttive-asm)
       * [Differenze tra pseudo-istruzioni, macro, direttive](#differenze-tra-pseudo-istruzioni-macro-direttive)
     * [Scrivere programmi in pseudo codice](#scrivere-programmi-in-pseudo-codice)
     * [Cosa deve essere salvato durante una IRQ (Interrupt request routine)](#cosa-deve-essere-salvato-durante-una-irq-interrupt-request-routine)
@@ -29,16 +28,379 @@ Indice creato con [github-markdown-toc](https://github.com/ekalinin/github-markd
     * [Codice di esempio con loop infinito](#codice-di-esempio-con-loop-infinito)
     * [Indirizzamento diretto e indiretto (come utilizzare FSR e INDF)](#indirizzamento-diretto-e-indiretto-come-utilizzare-fsr-e-indf)
     * [Codice d'esempio sull'utilizzo di un FOR con FSR/INDF](#codice-desempio-sullutilizzo-di-un-for-con-fsrindf)
+  * [Esercitazione 1](#esercitazione-1)
+    * [Brown OUT](#brown-out)
+    * [Latch UP](#latch-up)
+    * [Oscillatori](#oscillatori)
+    * [Selezione del banco di memoria](#selezione-del-banco-di-memoria)
+    * [Interazione con le porte](#interazione-con-le-porte)
+  * [Esercitazione 2](#esercitazione-2)
+    * [Interazione con i registri](#interazione-con-i-registri)
+  * [Esercitazione 3](#esercitazione-3)
+  * [Esercitazione 4](#esercitazione-4)
+  * [Esercitazione 5](#esercitazione-5)
+    * [Indirizzamento indiretto](#indirizzamento-indiretto)
+    * [TIMER0, assembly](#timer0-assembly)
+    * [ADC, assembly](#adc-assembly)
+  * [Lezione 1](#lezione-1)
+    * [GPIO](#gpio)
+      * [BISOGNA USARE PORT O LAT IN READ O WRITE?](#bisogna-usare-port-o-lat-in-read-o-write)
+      * [EASYPIC BOARD SETUP](#easypic-board-setup)
+  * [Lezione 2](#lezione-2)
+    * [INTERRUPT](#interrupt)
+  * [Lezione 3](#lezione-3)
+    * [TIMER0](#timer0)
+    * [TIMER1 modalità 16Bit vs 2x8](#timer1-modalità-16bit-vs-2x8)
+      * [Modalità 2x8](#modalità-2x8)
+      * [Modalità 1x16](#modalità-1x16)
+  * [Lezione 4](#lezione-4)
+    * [LCD](#lcd)
+  * [Lezione 4 - CCP (Sonar)](#lezione-4---ccp-sonar)
+    * [Cosa succede se TIMER1 va in overflow più volte durante una misura di CCP?](#cosa-succede-se-timer1-va-in-overflow-più-volte-durante-una-misura-di-ccp)
+  * [Lezione 6 - ADC](#lezione-6---adc)
+  * [Lezione 7 - PWM](#lezione-7---pwm)
   * [PIC 16](#pic-16)
   * [Appunti sulle conversioni sonar modalità capture e sonar letto con l'adc](#appunti-sulle-conversioni-sonar-modalità-capture-e-sonar-letto-con-ladc)
     * [SONAR in modalità CAPTURE](#sonar-in-modalità-capture)
     * [SONAR letto con ADC](#sonar-letto-con-adc)
 
-## Lezione 1 - GPIO
+## Numeri binari
+
+### Endianness
+
+La *Endianness* (ordine dei byte in Italiano) indica in che modo vengono salvati i bit all'interno della memoria di un sistema:
+
+* **Big endian**: i bit più significativi (MSB) sono scritti **per primi**
+* **Small endian**: i bit meno significativi (LSB) sono scritti **per primi**
+
+### Complementi
+
+Sono il metodo più diffuso per rappresentare numeri con segno in informatica. Il segno della somma di due numeri complementati verrà determinato in modo automatico, senza dover prendere particolari accorgimenti.
+
+* **Complemento ad uno**: si invertono i bit della parola. **Problema:** ci sono due rappresentazioni per il numero 0 (+0 e -0)
+* **Complemento a due**: si invertono i bit della parola e poi si somma 1. **La rappresentazione di 0** è univoca.
+
+## ASSEMBLY  
+
+### Memoria e la suddivisione in banchi
+
+La memoria del microcontrollore è costituita da dei banchi di memoria in cui si trovano tutti i registri disponibili. Per una questione di indirizzamento, non viene utilizzata un'unica pagina di memoria piena di registri, ma si utilizzano 4 banchi separati.
+Da come si può vedere, questi banchi contengono dei registri ripetuti più volte. Infatti questi sono i registri più comuni, ed è molto comodo non cambiare banco ogni qual volta si vuole eseguire un'operazione con quei registri.
+
+### Registri importanti
+
+Alcuni dei registri importanti in un PIC sono:
+
+* **PROGRAM COUNTER** *(PC)* è il registro che tiene traccia dell'indirizzo dell'istruzione corrente. È a sua volta composto da due registri, **PCL** e **PCH**. Normalmente incrementa di 1 ad ogni istruzione, ma può essere manipolato dalle istruzioni di branch.
+  * **PCL** contiene i bit da 0 7. È mappato in memoria ed è accessibile in lettura o in scrittura
+  * **PCH** contiene i bit da 8 a 12. Non è accessibilie direttamente in lettura o scrittura e deve essere manipolato tramite un meccanismo che coinvolge il registro **PCLATH**
+* **PCLATH** è il registro che fornisce i bit necessari all'istruzione di branch per effettuare il salto. I bit `<4:3>` vengono utilizzati nel **PCH** quando viene chiamata una istruzione `GOTO`.
+* **W** *(working register)* registro usato come operando nelle operazioni della ALU, sia come sorgente che come destinazione. Può anche essere manipolato direttamente poiché è mappato nella RAM.
+* **FSR** contiene l'indirizzo di memoria a cui punta il registro *INDF*. É mappato nella RAM.
+  * **INDF** è un registro virtuale che punta all'indirizzo contenuto in *FSR*. Può essere manipolato come un normale registro e viene usato per l'indirizzamento indiretto.
+* **OPTION** contiene vari bit di controllo per configurare:
+  * il *pull-up* della porta B (bit 7)
+  * l'*edge* dell'interrupt sulla porta B (*rising* o *falling*, bit 6)
+  * la sorgente del clock del TIMER 0 (transizione sul pin RA4/T0CKI o clock interno, bit 5)
+  * l'*edge* dell'interrupt sul pin RA4/T0CKI B (*rising* o *falling*, bit 4)
+  * il *prescaler* del TIMER 0 (bit 3)
+  * il *postscaler* del WATCHDOG (bit 2-0)
+* **STATUS** è il registro che può essere definito come il più importante del microcontrollore. Esso contiene i bit usati per:
+  * l'indirizzamento indiretto (bit 7, **IRP**)
+  * l'indirizzamento diretto  (bit 6-5, **RP1:RP0**)
+  * segnalare il *TIME OUT* (bit 4)
+  * segnalare il *POWER DOWN* (bit 3)
+  * segnalare se l'ultima operazione eseguita dalla ALU (aritmetica o logica) ha risultato zero (bit 2, **Z**)
+  * segnalare se c'è stato un carry **dal quarto bit in giù (quindi nel secondo nibble)** nell'ultima operazione eseguita dalla ALU (bit 1, **DC**)
+  * segnalare se c'è stato un carry nell'ultima operazione eseguita dalla ALU  (bit 0, **C**)
+
+#### Quali istruzioni affliggono lo STATUS register?
+
+* Tutte le operazioni di *addizione* (`ADDWF ADDLW`), *sottrazione* (`SUBWF SUBLW`) affliggono i bit **C** (carry) **DC** (digit carry) **Z** (Zero bit)
+* Le *rotate left* e *rotate right* (`RLF RRF`) affliggono il bit **C** (carry) perché hanno bisogno di 1 bit da salvare per lo shift
+
+* Tutte le operazioni di *incremento* e *decremento* non condizionali affliggono il bit **Z**
+* Le operazioni logiche `ANDWF CLEARF CLEARW COMF IORWF MOVF XORWF ANDLW IORLW XORLW` affliggono il bit **Z**
+
+* Tutte le operazioni rimanenti non affliggono lo status (esempio lo swap dei nibbles)
+
+### Struttura del codice
+
+### Salti e return in assembly
+
+* `GOTO XXX`: Salto assoluto. Aggiorna il PC ad un’etichetta designata. La dimensione dell’indirizzo dell’etichetta è di 11 bit. È sensibile al paging, infatti il bit 12 e 13 vengono letti da **PCLATH**. Quindi sarà necessario usare l'istruzione `BANKSEL` oppure modificare il **PCH**. Nei PIC18 il PC è a 21 bit assoluti e il `GOTO` è a 20bit; quindi può spostare l'esecuzione ovunque in 2M di memoria (in due cicli), ma c’è il problema del paging con `PCLATU` (non più H)
+* `BRA XXX`: Salto relativo. Posso spostarmi di massimo ±1023 posizioni dall’indirizzo di partenza. Essendo un salto condizionale partendo dal valore del PC corrente, non è affetto dal paging (non è disponibile nei PIC16).
+* `RETFIE`: specifica il return dall’interrupt (quindi sposta quello che c’era nel Top Of Stack nel PC) e riattiva il general interrupt GIE (che è stato disattivato all’ingresso della routine dell’interrupt).
+* `CALL`: va all’etichetta, esattamente come il goto, quindi è affetto da paging (USARE BANKSEL). Si salva nello stack il PC corrispondente alla posizione di chiamata. Appena la routine chiamata dal CALL, il PC viene rishiftato al chiamante.
+
+### Direttive asm
+
+* `#include`: stesso utilizzo del C++. Esempio: `#include <p18f452.inc>`
+* `UDATA`: dichiara l’inizio di una sezione di dati non inizializzati. Per riservare lo spazio in questa sezione bisogna utilizzare la direttiva `res`. L’utilizzo è `LABEL res #byte`. Se non vengono specificate label e indirizzo, (es `VARIABLES_IN_BANK udata 0x20`) é sufficiente usare la direttiva `.udata` e il linker provvederà in modo autonomo.
+* `BANKSEL XXX`: Serve per selezionare automaticamente il bank in base all’etichetta desiderata. Quindi se si vuole selezionare il registro *TRISB* senza sapere in che banco ci si trova, è sufficiente scrivere `BANKSEL TRISB`. Questo permette di poter riutilizzare *(con le dovute precauzioni della scelta del micro)* lo stesso codice su più micro diversi senza dovermi preoccupare del Bank da selezionare.
+* `CODE XXXX`: (indirizzo opzionale) significa che il linker può piazzare il codice nella program memory all’indirizzo specifico XXXX segnalato dall’utente, oppure viene lasciata libera la scelta dell’indirizzo al linker se il parametro non viene specificato.
+* `END`: specifica all’assembler che questa è la fine del file asm. Ogni file asm deve necessariamente finire con la direttiva `END`. Se così non fosse, l’assembler continuerebbe a passare tutta la memoria.
+* `EQU`: analogo del define del C++. Esempio: `MYPORT equ PORTD` (etichetta eq nome_indirizzo_in_RAM).
+
+#### Differenze tra pseudo-istruzioni, macro, direttive
+
+* **Direttiva**: una direttiva assembly è un comando utilizzato a livello software che compare nel source code ma non è direttamente traducibile come opcode. Di conseguenza una direttiva non compare nell’instruction set del datasheet del PIC ma nella User’s guide del MPASM™ Assembler.
+* **Pseudo-istruzione**: istruzione asm scritta con parole diverse in modo tale da agevolare la memorizzazione. Per esempio, nel PIC16 , c’è `MOVWF`, mentre la sua “complementare” dovrebbe essere `MOVFW`. Nelle istruzioni del datasheet però esiste solo `MOVF, w`. L’assemblatore via software permette di tradurre direttamente `MOVF, w` tramite la pseudo-istruzione `MOVFW`, in modo tale da avere meno confusione nel codice e migliore memorizzazione.
+* **Macro**: può essere considerata come “un’istruzione” a livello di sviluppo software, ma in realtà è **un gruppo di istruzioni unificate sotto un unico nome**. A differenza delle funzioni in linguaggio C, la macro è una sostituzione **in-line**. Questo significa che non viene effettuata una call, non viene cambiato il PC, non viene allocato spazio nello stack. Il contenuto della macro viene semplicemente inserito in quel punto del programma. Per maggiori informazioni, leggere la User’s guide del MPASM™ Assembler.
+
+### Scrivere programmi in pseudo codice
+
+Un processo alla base della scrittura di algoritmi per i neofiti della programmazione è lo sviluppo iniziale in pseudo-codice.
+Pur essendo all'apparenza "troppo base e scontato", questo è un ottimo metodo sia per pensare all'algoritmo che per debuggare in caso di ricontrollo del codice!
+Facciamo immediatamente un esempio (tenendo a mente le istruzioni del PIC16):
+
+Vogliamo comparare due variabili `PIPPO` e `PLUTO`, ponendo come condizione vera quando `PIPPO` è maggiore di PLUTO. In linguaggio C tutto ciò è intuitivo:
+`if (PIPPO > PLUTO)`. Ma nelle istruzioni del PIC16 non c'è il confronto maggiore o minore, **possiamo usare solo addizioni, sottrazioni e operazioni logiche o bit a bit**.  
+Di conseguenza andiamo a scrivere un po' di pseudo codice utilizzando solo queste operazioni:  
+
+``` pseudocode
+prendi risultato
+carica PIPPO su risultato   
+sottrai PLUTO a risultato   
+...   
+se risultato è negativo
+->PIPPO è minore di PLUTO  
+...  
+se risultato è positivo  
+->PIPPO è maggiore di PLUTO
+```
+
+Ora dobbiamo convertire tutto questo pseudo codice in qualcosa che il compilatore può capire.  
+**In questo esempio ci sono due criticità**:  
+
+1. è necessario avere un'ulteriore variabile risultato -> uso il working register `w`
+2. devo controllare il segno di risultato -> il registro `STATUS` contiene il bit carry (che viene portato a 1 nel caso in cui un'operazione restituisca una variabile negativa)
+
+Vado dunque a scrivere il codice:
+
+``` asm
+MOVFW PIPPO; sposto PIPPO nel working register
+SUBFW PLUTO; sottraggo PLUTO al working register
+BANKSEL STATUS; vado a selezionare il bank in cui sta STATUS
+BTFSS STATUS, c; Se PIPPO-PLUTO<0  ALLORA SKIPPA
+GOTO PIPPO_MAGGIORE; se il bit test non non skippa allora PIPPO è maggiore
+GOTO PIPPO_MINORE; se il bit test skippa allora PIPPO è minore
+```
+
+### Cosa deve essere salvato durante una IRQ (Interrupt request routine)
+
+Devono essere salvati:
+
+* Registro *W*
+* Registro *FSR*
+* Registro *PCLATH*
+* Registro *STATUS*
+
+in un registro ad uso generico nel banco attualmente selezionato.
+
+Esempio di codice:
+
+``` asm
+MOVWF W_TEMP; Copia il contenuto di W nel registro TEMP, nel banco 1 o 0
+SWAPF STATUS, W; Salva il registro status in W
+CLRF STATUS; indipendentemente dalla pagina, cancella IRP, RP1, RP0 nel banco 0
+MOVWF STATUS_TEMP; Salva il registro status nel registro STATUS TEMP nel banco 0
+
+MOVF PCLATH, W; Necessario nel caso si usi il banco 1, 2 o 3
+MOVWF PCLATH_TEMP; Salva PCLATH in W
+CLRF PCLATH; Pagina zero, indipendentemente dalla pagina attuale
+
+BCF STATUS, IRP; Ritorna al banco 0
+MOVF FSR, W; Copia FSR in W
+MOVWF FSR_TEMP; Copia FSR da W a FSR_TEMP
+
+: ;abbiamo salvato tutto quanto
+: (ISR)
+: ;dopo la routine di interrupt andiamo a ricaricare i salvataggi
+
+MOVF PCLATH_TEMP, W; Recupera PCLATH
+MOVWF PCLATH; Muove W in PCLATH
+SWAPF STATUS_TEMP, W; Scambia il registro STATUS_TEMP con W
+; (resetta il banco allo stato originario)
+
+MOVWF STATUS; Sposta W nel registro STATUS
+
+SWAPF W_TEMP, F; Inverte W_TEMP con F
+SWAPF W_TEMP, W; Inverte W_TEMP con W
+```
+
+pag 143 datasheet pic77 (vedi pag 40 per leggere dello stack)
+
+### Stringa di configurazione della CPU  
+
+* `_CONFIG`: parola inizio configurazione  
+* `_FOSC_XT`: selezione oscillatore (XT: cristallo)
+* `_WDTE_OFF`: watch dog (inattivo)
+* `_PWRTE_ON`: delay per alimentazione stabile uC all’accensione (acceso)  
+* `_CP_OFF`: code protection (inattivo)  
+* `_BOREN_ON`: brown out detect (attivo), se la tensione scende sotto una soglia (es alimentazione da batteria che si scarica) per evitare processi errati all’interno del uC, il `brown out resetta e tiene resettato il uC continuamente`
+
+### Codice di esempio con loop infinito  
+
+Questo codice contiene l'inizio del file asm che deve essere sempre inserito:
+
+``` asm
+_CONFIG _FOSC_XT & _PWRTE_ON & _CP_OFF & _BOREN_ON
+GENERATOR
+RES_VECT CODE 0x0000; processor reset vector
+GOTO START; go to beginning of program
+
+; TODO ADD INTERRUPTS HERE IF USED
+
+MAIN_PROG CODE; let linker place main program
+START
+GOTO $ ; loop forever
+END
+```
+
+### Indirizzamento diretto e indiretto (come utilizzare FSR e INDF)
+
+1. **Diretto**: **l’indirizzo della RAM è direttamente contenuto nell’opcode**, quindi l’indirizzo viene dall’instruction register (che contiene l’opcode appena ricavato dal PC)  
+
+2. **Indiretto**: **l’indirizzo della RAM è già contenuto nel FSR** (File Select Register), di conseguenza l’opcode non deve contenere direttamente l’indirizzo nell’ISR ma il suo “indice” (come un puntatore). **Può essere utilizzato per non dover riscrivere più volte lo stesso codice per indirizzi diversi.** Ad esempio, al posto di `clear indirizzo1; clear indirizzo2; clear indirizzo3;`. basta incrementare il FSR e ripetere la stessa routine il numero necessario di volte.
+
+### Codice d'esempio sull'utilizzo di un FOR con FSR/INDF
+
+``` asm
+CLRF 20h; cancella i dati all'indirizzo 20h
+CLRF 21h; cancella i dati all'indirizzo 21h
+:
+:
+CLRF 30h; cancella i dati all'indirizzo 30h
+```
+
+Come possiamo ottimizzare questa lunga sezione di codice? Vediamo come fare con FSR e INDF:
+
+``` asm
+MOVLW 0x20; Sposto l'indirizzo di partenza in W
+MOVWF FSR; lo sposto nel FSR
+EXT CLRF INDF; pulisco il registro puntato utilizzando INDF 
+INCF FSR, f; incremento FSR
+BTFSS FSR, 5; il bit 5 è a 1? Allora sono passato a 3xh (in cui la x sta per una cifra qualsiasi) quindi nel nostro caso 30h
+GOTO NEXT; se non siamo ancora a 30h continua il loop - nota che questa istruzione non viene eseguita se la precedente istruzione è vera
+```
+
+## Esercitazione 1
+
+### Brown OUT
+
+Causato da un *glitch* nell'alimentazione, normalmente di breve durata, che temporaneamente oscilla attorno al suo valore di riferimento fino al di sotto della tensione di alimentazione del microcontrollore. Si innesca quindi il processo di **Brown out reset (BOR)*.
+
+Effetti del *BOR* (durante il periodo di funzionamento del supervisore):
+
+* Viene attivato il timer *PWRT* (power up timer)
+* Il programma sul PIC viene resettato, ricominciando dall'indirizzo puntato dal *reset vector*
+* Viene sospesa la funzione *SLEEP*
+* Viene inizializzato il registro speciale *SFR* (special function register)
+
+### Latch UP
+
+Situazione che si verifica quando abbastanza corrente scorre attraverso il bulk del *BJT*, causando una caduta di tensione sufficiente da attivare il *BJT* parassita.
+
+### Oscillatori
+
+Tipi di oscillatori esterni:
+
+* LP - low power
+* XT - crystal resonator
+* HS - high speed crystal resonator
+* RC - resistor capacitor
+
+Vengono collegati tra i pin *OSC1* ed *OSC2* del microcontrollore
+
+### Selezione del banco di memoria
+
+Per accedere ad uno dei quattro banchi di memoria del microcontrollore, bisogna agire sui bit 6 e 7 (RP0 e RP1) del registro status.
+
+### Interazione con le porte
+
+Per settare lo stato della porta, bisogna prima agire sul registo TRIS*, settando ad input o output con le istruzioni apposite (rispettivamente `BSF` e `BCF`) il relativo pin.
+
+Successivamente si agisce sull'uscita effettiva della porta, sempre usando le due istruzioni, sul pin voluto della porta.
+
+**Prima di tutto ciò bisogna verificare di essere sul banco di memoria corretto.**
+
+Esempio:
+
+``` asm
+BCF TRISB,0; setta il pin 0 della porta B come output
+BSF PORTB,0; porta ad 1 (HIGH) il l'uscita sul pin
+```
+
+## Esercitazione 2
+
+### Interazione con i registri
+
+*Nota* con *f* e *d* si indicano due registri generici (quelli indicati come *general purpose*)
+
+Per caricare un valore nel registro *W* (il *working register*) si usa l'istruzione `MOVLW k` (il valore k verrà messo nel registro W).
+
+Per spostare un valore dal registro *W* ad un qualsiasi altro registro, si usa l'istruzione `MOVWF f` (il valore contenuto nel registro W verrà spostato all'interno del registro f).
+
+Per cancellare il contenuto del registro *f*, si usa l'istruzione `CLRF f`
+
+L'istruzione `MOVF f,d` copia il contenuto del registro f nel registro d. Questa istruzione influenza il bit *Z* del registro *STATUS*. Difatti, se il risultato è zero, il bit verrà settato ad 1 (e viceversa).
+
+L'istruzione `SWAPF f,d` inverte i due nibble di d e li salva in f.
+
+L'istruzione `ANDWF f,d` effettua l'operazione di and bit a bit tra il registro W ed il registro f e salva il risultato nel registro d. Se questo risultato è zero, il bit *Z* del registro *STATUS* viene portato ad 1.
+
+L'istruzione `ADDWF f,d` somma il contenuto di f al contenuto di w e salva il risultato in d. Ciò influenzerà i bit *Z*, *DC*, *C* del registro *STATUS*.
+
+L'istruzione `DECFSZ f,d` decrementa f e salta l'istruzione successiva se f diventa uguale a 0. d conterrà il valore f-1.
+
+## Esercitazione 3
+
+La direttiva `BANKSEL label` permette di selezionare il banco di memoria in cui l'etichetta *label* è definita. Non è possibile eseguire operazioni su *label* e deve essere stata definita in precedenza.
+
+Per attivare l'interrupt bisogna prima abilitare la `IRQ` sulla porta desiderata settando i bit *RBIX* e *GIE* (che influenzano la `IRQ` rispettivamente sulla porta X e in modo generale).
+
+Esempio:
+
+``` asm
+BSF INTCON,RBIE ; attiva la IRQ sulla porta B
+BSF INTCON,GIR ; attiva la IRQ su tutto il dispositivo 
+
+```
+
+All'interno dell'interrupt routine bisognerà disattivare la `IRQ` su tutto il microcontrollore in modo da evitare l'interruzione della stessa a seguito di un altro interrupt.
+
+## Esercitazione 4
+
+Durante la routine di interrupt bisogna salvare tutti quei registri che potrebbero venire modificati all'interno della stessa. In generale, possono essere i registri:
+
+* *W*, working register
+* *STATUS*, il registro di stato
+* *FSR*, il registro di indirizzamento indiretto
+
+**Ricorda sempre di disattivare la `IRQ` all'inzio della routine e di riattivarla alla fine**
+
+## Esercitazione 5
+
+### Indirizzamento indiretto
+
+Il registro *PCL* contiene gli LSB del *program counter* (da 7 a 0). Gli MSB sono contenuti nel registro *PCLATH* (bit da 12 a 8) -> 2 bit (MSB) provengono dal registro *status* e 7 bit (LSB) dall'istruzione. È possibile indirizzare 512 indirizzi.
+
+### TIMER0, assembly
+
+I registri coinvolti sono: ...
+
+### ADC, assembly
+
+I registri coinvolti sono: ...
+
+## Lezione 1
+
+### GPIO
 
 ![Input-Output](img/input_output.jpg)
 
-**NB:** tutti i pin sono settati in **Input di default**. Quando si setta un digital out scrivere sempre LATx=0 per reset.
+**Nota** Tutti i pin sono settati in **Input di default**. Quando si setta un digital out scrivere sempre LATx=0 per reset.
 
 | Uso         | TRIS          | ANSEL          |
 |:------------|:--------------|:---------------|
@@ -46,7 +408,7 @@ Indice creato con [github-markdown-toc](https://github.com/ekalinin/github-markd
 | Digital In  | TRISx.pin = 1 | ANSELx.pin = 0 |
 | Analog In   | TRISx.pin = 1 | ANSELx.pin = 1 |
 
-**NB**: se dei pin **non vengono definitivamente utilizzati** nel progetto, vengono settati come Output e poi il **LAT viene impostato a 0**. Questo previene switch (dovuti a cariche parassite accumulate) della porta che comportano consumo dovuto alla potenza dinamica di switching dell’ingresso.  
+**Nota** se dei pin **non vengono definitivamente utilizzati** nel progetto, vengono settati come Output e poi il **LAT viene impostato a 0**. Questo previene switch (dovuti a cariche parassite accumulate) della porta che comportano consumo dovuto alla potenza dinamica di switching dell’ingresso.  
 
 Ogni port ha diversi registri:
 
@@ -57,35 +419,96 @@ Ogni port ha diversi registri:
 | LATx     | 0 = Writing low           | 1 = Writing high           | Undefined              |
 | ANSELx   | 0 = Digital buffer **ON** | 1 = Digital buffer **OFF** | Digital buffer **OFF** |
 
-### USO PORT O LAT IN READ O WRITE?
+Significato dei registri:
 
-* **WRITE**: **LATx** e **PORTx** effettuano la stessa identica operazione di scrittura
-* **READ**: **PORTx** rappresenta lo stato fisico del pin, mentre **LATx** rappresenta il registro che pilota il data latch.  
+* **TRIS** indica la direzione (input o output) del pin
+* **PORT** buffer di lettura e scrittura
+* **LAT** buffer di scrittura
+* **ANSEL** indica il comportamento analogico del pin
 
-**Quando entrano in gioco i problemi?** Prendo per esempio **RB1** come digital Output. Faccio tutte le operazioni che mi pare con **PORTB.RB1** oppure **LATB.RB1** (non fa differenza).  
-Ora cambio **RB1** da digital Output a digital Input. Come risultato finale suppongo di avere **LATB.RB1=1**. Un bottone esterno impone ora il pin fisico con stato a 0. Se ora uso **PORTB.RB1**, leggo che effettivamente il pin è a zero. Se invece leggo LATB.RB1 mi ritrovo che il pin è a 1! Di conseguenza cosa devo usare?
+#### BISOGNA USARE PORT O LAT IN READ O WRITE?
 
-* **digital Input usare sempre e solo PORTB** in **READ**  
-* **digital Output** usare **PORTB** e **LATD** in **WRITE** a piacere
+* **OUTPUT**: **LATx** e **PORTx** effettuano la stessa identica operazione di scrittura
+* **INPUT**: **PORTx** rappresenta lo stato fisico del pin, mentre **LATx** rappresenta il registro che pilota il data latch.  
 
-### EASYPIC BOARD SETUP
+**Dove possono sorgere dei problemi?** Prendendo, per esempio **RB1** come digital Output, è possibile svolgere tutte le operazioni di I/O con **PORTB.RB1** oppure **LATB.RB1** (non fa differenza).  
+Cambiando **RB1** da digital Output a digital Input, suppongo che **LATB.RB1=1** come stato finale. Un bottone esterno impone ora il pin fisico con stato a 0. Usando **PORTB.RB1**, si legge che effettivamente il pin è a zero. Consultando invece LATB.RB1 risulta che il pin è a 1. Di conseguenza quale registro bisogna usare?
+
+* **INPUT usare sempre e solo PORTB** in **READ**  
+* **OUTPUT** usare **PORTB** e **LATD** in **WRITE**, è indifferente
+
+#### EASYPIC BOARD SETUP
 
 * **PORTA**: usata per aggiungere pulsanti e per fare polling. RA7-RA7 Connessi all'oscillatore.
-* **PORTB**: quasi interamente dedicata al LCD, attenzione che potrebbero venire usati RB6 e RB7 come pulsanti per interrupt on change (IOCB), IOCB disponibile da RB7-RB4, LCD connesso da RB5-RB0. **NB**: RB6 e RB7 vanno fuori uso con il debugger ON.
+* **PORTB**: quasi interamente dedicata al LCD, attenzione che potrebbero venire usati RB6 e RB7 come pulsanti per interrupt on change (IOCB), IOCB disponibile da RB7-RB4, LCD connesso da RB5-RB0. **NOTA**: RB6 e RB7 vanno fuori uso con il debugger ON.
 * **PORTC**: poco spesso usata per altri scopi se non per il modulo sonar.
 * **PORTD**: spesso usata per operazioni con i led (tutta la porta). RD1 PWM.
 * **PORTE**: usata per un PWM, PWM software o per dei led di segnalazione. RE2 PWM, RE3 MCRL.
 
-## Lezione 2 - Timer 0
+## Lezione 2
+
+### INTERRUPT
+
+Gli interrupt sono degli strumenti estremamente efficienti per gestire eventi asincroni interni o esterni senza dover alterare la normale esecuzione del programma.
+
+Esempi di eventi asincroni:
+
+* **Interni**: fine conversione ADC, overflow del TIMER ...
+* **Esterni**: cambi di stato di un pin, ricezione di dati via spi ...
+
+Tramite gli interrupt è possibile assegnare priorità differenti a ciascun processo che può avvenire simultaneamente, in modo da gestire temporalmente le varie funzioni.
+
+Esistono due priorità di interrupt:
+
+* A **bassa priorità** (LP)
+* Ad **alta priorità** (HP)
+
+L'interrupt è gestito salvando lo stato attuale e recuperando l'indirizzo a cui punta la routine di interrupt. L'esecuzione del programma principale può essere interrotta sia da interrupt **HP** ed **LP**, mentre le routine di interrupt possono essere interrotte solo da interrupt di priorità più alta.
+
+Ci sono 2 registri da usare per gestire l'interrupt:
+
+1. **IE** (interrupt enable), serve ad attivare globalmente l'interrupt. Se è riferita all'intero sistema e non ad un singolo componente, si chiama anche **GIE** (global interrupt enable)
+1. **IF** (interrupt flag), serve a capire quale entità ha scatenato l'interrupt
+
+Dopodichè è necessario definire una **ISR** (interrupt service routine), cioè la funzione che verrà chiamata quando l'interrupt viene causato. Essa deve essere quanto più leggera e veloce possibile, poichè una ISR di durata considerevole può creare problemi alla corretta esecuzione del programma principale.
+
+L'intero processo di interrupt può essere quindi diviso in due fasi:
+
+1. **Inizializzazione**
+
+   1. Si attiva la periferica che causerà l'interrupt
+   1. Si reimposta la **IF**
+   1. Si abilita la **GIE**
+
+1. **ISR**
+
+   1. Si controlla la **IF** per capire che periferica ha scatenato l'interrupt
+   1. Si resetta la relativa **IF**
+   1. Si scrive il codice che deve essere eseguito
+
+Registri relativi all'interrupt:
+
+* **INTCON**, **INTCON2**, **INTCON3** interrupt control register
+* **PIR1**, **PIR2**, **PIR3**, **PIR4**, **PIR5** peripheral interrupt registers
+* **PIE1**, **PIE2**, **PIE3**, **PIE4**, **PIE5** peripheral interrupt enable registers
+* **IPR1**, **IPR2**, **IPR3**, **IPR4**, **IPR5** interrupt priority registers
+* **RCON** reset control register
+* **IOCB** interrupt on change port B register
+
+**NOTA** controllare sempre prima il datasheet per sapere con esattezza quali registri manipolare. Quattro dei pin della porta b (dal 7 al 4) sono configurabili come interrupt-on-change tramite I bit del IOCB. Per poter disattivare il bit **RBIF** è necessario prima leggere il valore sulla porta.
+
+## Lezione 3
+
+### TIMER0
 
 ![timer0](img/timer0.jpg)
 
 Il TIMER0 è un contatore che subisce un overflow (passaggio da valore massimo a zero) dopo un tempo definito dall'utente attraverso il setup dei registri dedicati.
-Si parte dalla selezione dell'oscillatore esterno o interno. Mediante un multiplexer possiamo selezionare la frequenza di incremento del contatore. **la nostra frequenza tipica è Fosc/4 in cui, grazie al PLL, Fosc è 32MHz (8MHz di default)**.
+Si parte dalla selezione dell'oscillatore esterno o interno. Mediante un multiplexer possiamo selezionare la frequenza di incremento del contatore. **la sua frequenza tipica è Fosc/4 in cui, grazie al PLL, Fosc è 32MHz (8MHz di default)**.
 
-**T0CKI** pin non lo useremo mai, è il pin per comunicare con l'esterno che se abilitato come sorgente fornisce un impulso edge sensitive in base alla impostazione selezionata con T0SE (variazione sul rising/falling edge).
+**T0CKI** pin (durante il corso non lo useremo mai) è il pin per comunicare con l'esterno che se abilitato come sorgente fornisce un impulso edge sensitive in base alla impostazione selezionata con **T0SE** (variazione sul rising/falling edge).
 
-Successivamente alla selezione della sorgente c'è la scelta del sì o no prescaler, **il prescaler è un divisore di frequenza**. Il modo più facile per costruire un prescaler è utilizzare un contatore. Quest'ultimo quando supera una certa soglia fornisce in uscita un impulso. Può essere settato solo a potenze di 2 da 4 a 256 (massimo prescaler-> massimo tempo-> minima frequenza).
+Successivamente alla selezione della sorgente c'è la scelta dell'abilitazione del prescaler, **divisore di frequenza**. Il modo più facile per costruire un prescaler è utilizzare un contatore. Quest'ultimo quando supera una certa soglia fornisce in uscita un impulso. Può essere settato solo a potenze di 2 da 4 a 256 (massimo prescaler-> massimo tempo-> minima frequenza).
 
 L'ultima sezione, tralasciando il sync clock, dice semplicemente che devono passare due colpi di clock per aggiornare il timer. Ci ritroviamo infine con il registro **TMR0L (registro low del timer 0)**. È un registro a 8 bit, i meno significativi del nostro registro di timer. **Questo registro è un contatore che setta la flag dell'interrupt TMR0IF quando va in overflow**. Se disabilito l’interrupt posso usarlo anche solo come contatore. **Il registro principale per configurare è T0CON**.
 
@@ -95,72 +518,83 @@ La **frequenza di interrupt è frequenza d’ingresso (Fosc/4) diviso il prescal
 
 La configurazione con cui usiamo la nostra scheda è 32MHz. La frequenza di interrupt minima (che corrisponde al massimo tempo tra un interrupt e l’altro), è:  
 
-```f_min = f_osc / ( 4 *256* ( 256 - TMR0L ))```
+```f_min = f_osc / ( 4  *256* ( 256 - TMR0L ))```
 
 Bisogna tenere conto del **valore di TMR0L** (il valore iniziale contenuto nel registro). Settando **TMR0L=0** siamo sicuri che il contatore parta a contare sempre da zero.  
 **Se vogliamo una frequenza di interrupt diversa da una potenza di 2** (vedi formula sopra), all'interno della routine di interrupt possiamo impostare TMR0L ad un valore diverso da zero.
 
-Il **tempo di interrupt** si ottiene semplicemente ribaltando la formula:  
+Il **tempo di interrupt** si ottiene semplicemente invertendo la formula:  
 
 ```t_max = ( 4 * 256 * ( 256 - TMR0L ) ) / f_osc```
 
-**4/32MHz = 1/8MHz corrispondono a 125 ns. Questo è fisso (a meno di disabilitare il PLL)**. Il risultato finale del tempo massimo dà 8,192 ms. 8 come approssimazione all’esame è più che sufficiente. Se si volesse avere più precisione ci sono 2 opzioni:
+**4/32MHz = 1/8MHz corrispondono a 125 ns. Questo è fisso (a meno di disabilitare il PLL)**. Il risultato finale del tempo massimo dà 8.192 ms *(all’esame, 8 è una approsimazione più che sufficiente)*. Se si volesse avere più precisione ci sono 2 opzioni:
 
-* Salvare bene il valore del tempo di interrupt utilizzando un long int e tenendo per esempio in conto che ogni interrupt è 8192
-* sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler. Per esempio, **se TMR0L==6 allora il tempo è precisamente 8 millisecondi**. Questa impostazione deve essere inserita sempre all'interno della routine di interrupt e nelle prime righe di setup del codice così da avere:
-  * il valore iniziale impostato correttamente all'accensione del micro
-  * ogni volta che il timer va in overflow resettiamo la conta al valore iniziale voluto
+* Salvare il valore del tempo di interrupt utilizzando un long int e tenendo, per esempio, in conto che ogni interrupt avviene ogni 8192
+* Sistemare il prescaler oppure modulare TMR0L in modo che dia un numero intero sempre sempre con l’aiuto del prescaler. Per esempio, **se TMR0L=6 allora il tempo è precisamente 8 millisecondi**. Questa impostazione deve essere inserita sempre all'interno della routine di interrupt e nelle prime righe di setup del codice così da avere:
+  1. il valore iniziale impostato correttamente all'accensione del micro
+  1. ogni volta che il timer va in overflow resettiamo la conta al valore iniziale voluto
 
-## Lezione 2 - TIMER1 modalità 16Bit vs 28
+### TIMER1 modalità 16Bit vs 2x8
 
-**NB:** solo i timer di indice pari possono essere a 8 bit (TIMER2,TIMER4).  
-Però notiamo che all'interno del registro TxCON è presente un bit (TxRD16) che parla di **modalità 16bit o 2x8**.  
+**Nota** Solo i timer di indice pari possono essere a 8 bit (**TIMER2**, **TIMER4**).  
 
-È certamente possibile utilizzare i timer di indice dispari a 8 bit, ma è necessaria una delle seguenti manovre:
+Osservando il datasheet si nota che all'interno del registro TxCON è presente un bit (*TxRD16) che fa riferimento a **modalità 16bit o 2x8**.  
 
-* essendo il timer a 16 bit, usiamo solo gli 8 bit più significativi in modo tale da poter comunque sfruttare l'overflow una volta pieno il timer.
+È certamente possibile utilizzare i timer di indice dispari a 8 bit, ma è necessaria una delle seguenti opearazioni:
 
-**Modalità 2x8**  
-Questa è la modalità più semplice per usare il timer, **TMRx** è semplicemente diviso in **TMrxH** e **TMRxL**, la lettura chiaramente viene fatta un bit alla vota e il byte flag di interrupt viene alzato all' overflow di **TMRxH**  
+1. Usare solo gli 8 bit più significativi del registro in modo tale da poter comunque sfruttare l'overflow una volta pieno il timer. *(Il registro è da 16 bit)*
+1. Sfruttare la **modalità 2x8**  
+
+#### Modalità 2x8
+
+Questa è la modalità più semplice per usare il timer. **TMRx** (registro da 16 bit) è semplicemente diviso in **TMrxH** e **TMRxL** (registri da 8 bit). La lettura viene fatta un bit alla vota e il flag di interrupt viene alzato all'overflow di **TMRxH**  
 
 Questa modalità però **presenta dei problemi sostanziali**, che potrebbero portare a errori nel programma.
 
-Facciamo un esempio: immaginiamo **TMR1** acceso, **TMR1L=0xFF TMR1H=0x00**  
-Procediamo con la lettura di **TMR1L**, salviamo il dato in una variabile, risultato sarà pari a **0x00FF** ( a 16Bit)
-A questo punto leggiamo il Byte alto, ma il timer non è stato spento, ed è andato avanti nel conteggio: **MR1L=0x00 TMR1H=0x01**
-Il programma procede a leggere il Byte successivo e il risultato sarà pari a
+Facciamo un esempio:
 
-``` 0x00FF + 0x0100 = 0x01FF ```
-
-diverso sostanzialmente da 0x00FF che avremmo dovuto ottenere.
+1. Immaginiamo, con **TMR1** acceso, ```TMR1H=0x00```,  ```TMR1L=0xFF```
+1. Procediamo con la lettura di **TMR1L** e salviamo il dato in una variabile.  Il risultato sarà pari a ```0x00FF``` (a 16 bit)
+1. A questo punto leggiamo il byte alto **TMR1H**, ma il timer non è stato spento ed è andato avanti nel conteggio. Quindi ```TMR1L=0x00 TMR1H=0x01```
+1. Il programma procede a leggere il Byte successivo e il risultato sarà pari a ``` 0x00FF + 0x0100 = 0x01FF ```, *valore diverso da quello atteso*, ```0x00FF```
 
 **Facciamo un esempio di lettura nell' altro senso:**`
 
-1. TMR1=0x00FF
-2. leggo TMR1H -> Res sarà 0x0000;
-3. il timer conta -> TMR1= 0x0100;
-4. Leggo TMR1L -> Res sarà 0x0000; =/= 0x00FF che ci aspettavamo.
+1. Supponiamo, sempre con **TMR1** acceso, che ```TMR1=0x00FF```
+1. Il valore in **TMR1H** sarà ```TMR1H=0x0000```
+1. Il timer continuerà a contare, e quindi ```TMR1=0x0100```
+1. In **TMR1L** ci sarà un valore ```0x0000; =/= 0x00FF``` che ci aspettavamo.
 
-**Quando allora questa modalità è utile?**
+Sostanzialmente si verifica sempre una discrepanza tra il valore atteso all'interno del timer e la somma dei valori letti nei due registri a cause del tempo necessario a raccogliere i valori contenuti in questi ultimi.
 
--Quando non ci interessa il contenuto del timer ma solo l'overflow
--Quando ci interessa un solo byte del timer che sia H o L ( utile ad esempio in un **PWM software**, vedi gli appunti più avanti)
+**Quando allora questa modalità è comoda da usare?**
 
-Per correggere questo problema è stato introdotta l'altra modalità
-**1x16**.
-La modalità che chiameremo **1x16** viene chiamata ufficialmente **16Bit** read/Write e quello che fa di fatto è **introdurre un buffer su TMR1H:**
-Il byte alto del timer a questo punto **non sarà più direttamente controllabile o leggibile** ( lo chiameremo **TMR1H**), ma potremo accedere solamente al buffer( di fatto il PIC sposta fisicamente l'idirizzo, quindi a livello di codice noi accediamo lo stesso registro)
-**Il buffer viene copiato** quando viene toccato **TMR1L**:
+* Quando non interessa il contenuto del timer ma solo l'overflow
+* Quando interessa un solo byte del timer, sia esso H o L (utile, ad esempio, in un **PWM software**. Vedi gli appunti più avanti)
 
--Leggo **TMR1L** -> **contemporaneamente TMR1H** verrà copiato in **TMR1H**, in questo modo il dato è salvato in sincronia, e anche se viene letto successivamente il conteggio del timer non lo influisce.
--Scrivo **TMR1H** -> nello stesso istante viene copiato **TMR1H** in **TMR1H**, il caricamento del valore iniziale viene fatto in sincronia e non c'è rischio di problemi in caricamento.
+Per correggere questo problema è stato introdotta l'altra modalità, chiamata **1x16**.
 
-**Problemi relativi a questo:**
+#### Modalità 1x16
 
--Se devo accedere solo a **TMR1H** Devo per forza leggere **TMR1L**, perdendo di fatto tempo.
--Se dovessi sbagliare l'ordine di lettura/scrittura otterrei dati/funzionamento non valido.
+La modalità che chiameremo **1x16** viene chiamata ufficialmente **16Bit** Read/Write e quello che fa di fatto è **introdurre un buffer su TMR1H**
+Il byte alto del timer a questo punto **non sarà più direttamente controllabile o leggibile** (lo chiameremo **TMR1H:**), ma si potrà accedere solamente al buffer (di fatto il PIC sposta fisicamente l'indirizzo, quindi a livello di codice si accederà allo stesso registro).
+**Il buffer viene copiato** quando viene manipolato **TMR1L**:
 
-## Lezione 2 - LCD
+* Lettura di **TMR1L**
+  * Contemporaneamente **TMR1H:** verrà copiato in **TMR1H**
+  * Così facendo la lettura del byte alto **TMR1H** sarà congruo allo stato del timer nel momento della lettura di **TMR1L** e non soffrirà del ritardo dovuto al tempo passato tra le istruzioni
+* Scrittura di  **TMR1L**
+  * Contemporaneamente **TMR1H** verrà copiato in **TMR1H:**
+  * Così facendo il valore del byte alto **TMR1H** sarà congruo allo stato del timer nel momento della scrittura di **TMR1L** e non soffrirà del ritardo dovuto al tempo passato tra le istruzioni
+
+**Problemi relativi a questa modalità:**
+
+1. Se serve leggere solo a **TMR1H** si deve per forza leggere **TMR1L**, perdendo di fatto tempo.
+1. Bisogna rispettare sempre l'ordine di lettura o scrittura (prima **TMR1L** e poi **TMR1H**). Invertendo le due operazioni si otterrebbero valori non validi e quindi potenzialmente un malfunzionamento del software.
+
+## Lezione 4
+
+### LCD
 
 **Lo schermo LCD è composto da due righe e 16 colonne** .  
 La cosa importante da capire a riguardo è che per comunicare con questo display c’è un protocollo apposito, altrimenti dovremmo comunicare con la memoria interna dell’LCD. Per semplificarci la vita noi useremo la sua libreria che è ad un “livello di astrazione più alto” rispetto al manipolare l’LCD noi.
@@ -208,7 +642,7 @@ In particolare il comando principale è ``Lcd_Out(riga, colonna, “cosa vuoi sc
 Quindi mi raccomando rifletti bene sulla dimensione di questo array, che risulta essere un puntatore alla prima cella della stringa.  
 In C non esiste nessun metodo a runtime per conoscere la lunghezza di un vettore.  
 Quando dichiariamo queste stringhe in C dobbiamo usare per forza quello che si chiama carattere di terminazione `\0` e indica la terminazione di una stringa. **Quindi appena passo una stringa come variabile, il compilatore legge fino a `\0` e poi si ferma** .  
-È importante questa cosa perché se gli passiamo una stringa senza carattere di terminazione lui continua a leggere anche oltre la terminazione di memoria che non appartiene più alla nostra variabile. **Lascia sempre lunghezzastringa + 1 di spazio o rischi di sbagliare a stampare sull’LCD**.
+È importante questa cosa perché se gli passiamo una stringa senza carattere di terminazione lui continua a leggere anche oltre la terminazione di memoria che non appartiene più alla nostra variabile. **Lascia sempre lunghezza stringa + 1 di spazio o rischi di sbagliare a stampare sull’LCD**.
 
 Riguardo all’LCD all’esame c'è il **file con la intestazione e la manipolazione base della stringhe**.
 
@@ -293,7 +727,7 @@ Bisogna utilizzare l’interrupt del CAPTURE. Ogni volta che cambio rising e fal
 TMR1 è un contatore da 16 bit, **prima o poi andrà in overflow** .  
 E se la seconda misura venisse presa dopo un overflow? Come si fa? Analizziamo (esempio dell’orologio):
 
-Immaginiamo un orologio con due lancette A e B. A è prima di mezzo giorno, la seconda è dopo mezzogiorno. La distanza tra le lancette è la stessa ma B raffigura un overflow del timer perchè ha superato mezzo giorno.  
+Immaginiamo un orologio con due lancette A e B. A è prima di mezzo giorno, la seconda è dopo mezzogiorno. La distanza tra le lancette è la stessa ma B raffigura un overflow del timer perché ha superato mezzo giorno.  
 **Questo caso viene magicamente risolto dall’ALU**: i designer del micro avevano previsto la possibilità di ovf. Quindi, sapendo che l’ALU fa le somme con il complemento a due (CPL2),  l’ ALU fa diventare il secondo operando negativo e poi somma i due operandi. Però così facendo ho bisogno di 17 bit. L’ALU conserva quest'ultimo nel bit di carry (vedi lo status).  
 
 Unità di misura del timer fosc/4, in tempo ogni colpo avviene ogni 125 ns (sapendo che fosc= 32MHz).
@@ -597,200 +1031,6 @@ void main() {
        delay_ms(4);
      }
 }
-```
-
-## ASSEMBLY  
-
-### Memoria e la suddivisione in banchi
-
-La memoria del microcontrollore è costituita da dei banchi di memoria in cui si trovano tutti i registri disponibili. Per una questione di indirizzamento, non viene utilizzata un'unica pagina di memoria piena di registri, ma si utilizzano 4 banchi separati.
-Da come si può vedere, questi banchi contengono dei registri ripetuti più volte. Infatti questi sono i registri più comuni, ed è molto comodo non cambiare banco ogni qual volta si vuole eseguire un'operazione con quei registri.
-
-### Registri importanti
-
-Alcuni dei registri importanti in un PIC sono:
-
-* **PROGRAM COUNTER** *(PC)* è il registro che tiene traccia dell'indirizzo dell'istruzione corrente. È a sua volta composto da due registri, **PCL** e **PCH**. Normalmente incrementa di 1 ad ogni istruzione, ma può essere manipolato dalle istruzioni di branch.
-  * **PCL** contiene i bit da 0 7. È mappato in memoria ed è accessibile in lettura o in scrittura
-  * **PCH** contiene i bit da 8 a 12. Non è accessibilie direttamente in lettura o scrittura e deve essere manipolato tramite un meccanismo che coinvolge il registro **PCLATH**
-* **PCLATH** è il registro che fornisce i bit necessari all'istruzione di branch per effettuare il salto. I bit `<4:3>` vengono utilizzati nel **PCH** quando viene chiamata una istruzione `GOTO`.
-* **W** *(working register)* registro usato come operando nelle operazioni della ALU, sia come sorgente che come destinazione. Può anche essere manipolato direttamente poiché è mappato nella RAM.
-* **FSR** contiene l'indirizzo di memoria a cui punta il registro *INDF*. É mappato nella RAM.
-  * **INDF** è un registro virtuale che punta all'indirizzo contenuto in *FSR*. Può essere manipolato come un normale registro e viene usato per l'indirizzamento indiretto.
-* **OPTION** contiene vari bit di controllo per configurare:
-  * il *pull-up* della porta B (bit 7)
-  * l'*edge* dell'interrupt sulla porta B (*rising* o *falling*, bit 6)
-  * la sorgente del clock del TIMER 0 (transizione sul pin RA4/T0CKI o clock interno, bit 5)
-  * l'*edge* dell'interrupt sul pin RA4/T0CKI B (*rising* o *falling*, bit 4)
-  * il *prescaler* del TIMER 0 (bit 3)
-  * il *postscaler* del WATCHDOG (bit 2-0)
-* **STATUS** è il registro che può essere definito come il più importante del microcontrollore. Esso contiene i bit usati per:
-  * l'indirizzamento indiretto (bit 7, **IRP**)
-  * l'indirizzamento diretto  (bit 6-5, **RP1:RP0**)
-  * segnalare il *TIME OUT* (bit 4)
-  * segnalare il *POWER DOWN* (bit 3)
-  * segnalare se l'ultima operazione eseguita dalla ALU (aritmetica o logica) ha risultato zero (bit 2, **Z**)
-  * segnalare se c'è stato un carry **dal quarto bit in giù (quindi nel secondo nibble)** nell'ultima operazione eseguita dalla ALU (bit 1, **DC**)
-  * segnalare se c'è stato un carry nell'ultima operazione eseguita dalla ALU  (bit 0, **C**)
-
-#### Quali istruzioni affliggono lo STATUS register?
-
-* Tutte le operazioni di *addizione* (`ADDWF ADDLW`), *sottrazione* (`SUBWF SUBLW`) affliggono i bit **C** (carry) **DC** (digit carry) **Z** (Zero bit)
-* Le *rotate left* e *rotate right* (`RLF RRF`) affliggono il bit **C** (carry) perché hanno bisogno di 1 bit da salvare per lo shift
-
-* Tutte le operazioni di *incremento* e *decremento* non condizionali affliggono il bit **Z**
-* Le operazioni logiche `ANDWF CLEARF CLEARW COMF IORWF MOVF XORWF ANDLW IORLW XORLW` affliggono il bit **Z**
-
-* Tutte le operazioni rimanenti non affliggono lo status (esempio lo swap dei nibbles)
-
-### Struttura del codice
-
-### Salti e return in assembly
-
-* `GOTO XXX`: Salto assoluto. Aggiorna il PC ad un’etichetta designata. La dimensione dell’indirizzo dell’etichetta è di 11 bit. È sensibile al paging, infatti il bit 12 e 13 vengono letti da **PCLATH**. Quindi sarà necessario usare l'istruzione `BANKSEL` oppure modificare il **PCH**. Nei PIC18 il PC è a 21 bit assoluti e il `GOTO` è a 20bit; quindi può spostare l'esecuzione ovunque in 2M di memoria (in due cicli), ma c’è il problema del paging con `PCLATU` (non più H)
-* `BRA XXX`: Salto relativo. Posso spostarmi di massimo ±1023 posizioni dall’indirizzo di partenza. Essendo un salto condizionale partendo dal valore del PC corrente, non è affetto dal paging (non è disponibile nei PIC16).
-* `RETFIE`: specifica il return dall’interrupt (quindi sposta quello che c’era nel Top Of Stack nel PC) e riattiva il general interrupt GIE (che è stato disattivato all’ingresso della routine dell’interrupt).
-* `CALL`: va all’etichetta, esattamente come il goto, quindi è affetto da paging (USARE BANKSEL). Si salva nello stack il PC corrispondente alla posizione di chiamata. Appena la routine chiamata dal CALL, il PC viene rishiftato al chiamante.
-
-### Direttive ASM
-
-* `#include`: tale e quale a C++. Esempio: `#include <p18f452.inc>`
-* `UDATA`: dichiara l’inizio di una sezione di dati non inizializzati. Per riservare lo spazio in questa sezione bisogna utilizzare la direttiva RES. L’utilizzo è `LABEL res #byte`. Se non vengono specificate label e indirizzo, (es `VARIABLES_IN_BANK udata 0x20`) si scrive .udata e il linker fa tutto da sé.
-* `BANKSEL XXX`: Serve per selezionare automaticamente il bank in base all’etichetta desiderata. Quindi se voglio selezionare un TRISB e non so dove sono, scrivo BANKSEL TRISB. Questo mi permette di poter mettere *(con le dovute precauzioni della scelta del micro)* lo stesso codice su un altro micro senza preoccuparmi del Bank da selezionare.
-* `CODE XXXX`: (indirizzo opzionale) significa che il linker può piazzare il codice nella program memory all’indirizzo specifico XXXX segnalato dall’utente, oppure viene lasciata libera la scelta dell’indirizzo al linker se il parametro non viene specificato.
-* `END`: specifica all’assembler che questa è la fine del file asm. Ogni file asm deve necessariamente finire con la direttiva `END`. Se così non fosse, l’assembler continuerebbe a passare tutta la memoria.
-* `EQU`: analogo del define del C++. Esempio: `MYPORT equ PORTD` (etichetta eq nome_indirizzo_in_RAM).
-
-#### Differenze tra pseudo-istruzioni, macro, direttive
-
-* **Direttiva**: una direttiva assembly è un comando utilizzato a livello software che compare nel source code ma non è direttamente traducibile come opcode. Di conseguenza una direttiva non compare nell’instruction set del datasheet del PIC ma nella User’s guide del MPASM™ Assembler.
-* **Pseudo-istruzione**: istruzione ASM scritta con parole diverse in modo tale da agevolare la memorizzazione. Per esempio, nel PIC16 , c’è `MOVWF`, mentre la sua “complementare” dovrebbe essere `MOVFW`. Nelle istruzioni del datasheet però esiste solo `MOVF, w`. L’assemblatore via software permette di tradurre direttamente `MOVF, w` tramite la pseudo-istruzione `MOVFW`, in modo tale da avere meno confusione nel codice e migliore memorizzazione.
-* **Macro**: può essere considerata come “un’istruzione” a livello di sviluppo software, ma in realtà è **un gruppo di istruzioni unificate sotto un unico nome**. A differenza delle funzioni in linguaggio C, la macro è una sostituzione **in-line**. Questo significa che non viene effettuata una call, non viene cambiato il PC, non viene allocato spazio nello stack. Il contenuto della macro viene semplicemente inserito in quel punto del programma. Per maggiori informazioni, leggere la User’s guide del MPASM™ Assembler.
-
-### Scrivere programmi in pseudo codice
-
-Un processo alla base della scrittura di algoritmi per i neofiti della programmazione è lo sviluppo iniziale in pseudo-codice.
-Pur essendo all'apparenza "troppo base e scontato", questo è un ottimo metodo sia per pensare all'algoritmo che per debuggare in caso di ricontrollo del codice!
-Facciamo immediatamente un esempio (tenendo a mente le istruzioni del PIC16):
-
-Vogliamo comparare due variabili `PIPPO` e `PLUTO`, ponendo come condizione vera quando `PIPPO` è maggiore di PLUTO. In linguaggio C tutto ciò è intuitivo:
-`if (PIPPO > PLUTO)`. Ma nelle istruzioni del PIC16 non c'è il confronto maggiore o minore, **possiamo usare solo addizioni, sottrazioni e operazioni logiche o bit a bit**.  
-Di conseguenza andiamo a scrivere un po' di pseudo codice utilizzando solo queste operazioni:  
-
-``` pseudocode
-prendi risultato
-carica PIPPO su risultato   
-sottrai PLUTO a risultato   
-...   
-se risultato è negativo
-->PIPPO è minore di PLUTO  
-...  
-se risultato è positivo  
-->PIPPO è maggiore di PLUTO
-```
-
-Ora dobbiamo convertire tutto questo pseudo codice in qualcosa che il compilatore può capire.  
-**In questo esempio ci sono due criticità**:  
-
-1. è necessario avere un'ulteriore variabile risultato -> uso il working register `w`
-2. devo controllare il segno di risultato -> il registro `STATUS` contiene il bit carry (che viene portato a 1 nel caso in cui un'operazione restituisca una variabile negativa)
-
-Vado dunque a scrivere il codice:
-
-``` ASM
-MOVFW PIPPO; sposto PIPPO nel working register
-SUBFW PLUTO; sottraggo PLUTO al working register
-BANKSEL STATUS; vado a selezionare il bank in cui sta STATUS
-BTFSS STATUS, c; Se PIPPO-PLUTO<0  ALLORA SKIPPA
-GOTO PIPPO_MAGGIORE; se il bit test non non skippa allora PIPPO è maggiore
-GOTO PIPPO_MINORE; se il bit test skippa allora PIPPO è minore
-```
-
-### Cosa deve essere salvato durante una IRQ (Interrupt request routine)
-
-``` ASM
-MOVWF W_TEMP; Copia il contenuto di W nel registro TEMP, nel banco 1 o 0
-SWAPF STATUS, W; Salva il registro status in W
-CLRF STATUS; indipendentemente dalla pagina, cancella IRP, RP1, RP0 nel banco 0
-MOVWF STATUS_TEMP; Salva il registro status nel registro STATUS TEMP nel banco 0
-
-MOVF PCLATH, W; Necessario nel caso si usi il banco 1, 2 o 3
-MOVWF PCLATH_TEMP; Salva PCLATH in W
-CLRF PCLATH; Pagina zero, indipendentemente dalla pagina attuale
-
-BCF STATUS, IRP; Ritorna al banco 0
-MOVF FSR, W; Copia FSR in W
-MOVWF FSR_TEMP; Copia FSR da W a FSR_TEMP
-
-: ;abbiamo salvato tutto quanto
-: (ISR)
-: ;dopo la routine di interrupt andiamo a ricaricare i salvataggi
-
-MOVF PCLATH_TEMP, W; Recupera PCLATH
-MOVWF PCLATH; Muove W in PCLATH
-SWAPF STATUS_TEMP, W; Scambia il registro STATUS_TEMP con W
-; (resetta il banco allo stato originario)
-
-MOVWF STATUS; Sposta W nel registro STATUS
-
-SWAPF W_TEMP, F; Inverte W_TEMP con F
-SWAPF W_TEMP, W; Inverte W_TEMP con W
-```
-
-pag 143 datasheet pic77 (vedi pag 40 per leggere dello stack)
-
-### Stringa di configurazione della CPU  
-
-* `_CONFIG`: parola inizio configurazione  
-* `_FOSC_XT`: selezione oscillatore (XT: cristallo)
-* `_WDTE_OFF`: watch dog (inattivo)
-* `_PWRTE_ON`: delay per alimentazione stabile uC all’accensione (acceso)  
-* `_CP_OFF`: code protection (inattivo)  
-* `_BOREN_ON`: brown out detect (attivo), se la tensione scende sotto una soglia (es alimentazione da batteria che si scarica) per evitare processi errati all’interno del uC, il `brown out resetta e tiene resettato il uC continuamente`
-
-### Codice di esempio con loop infinito  
-
-Questo codice contiene l'inizio del file asm che deve essere sempre inserito:
-
-``` ASM
-_CONFIG _FOSC_XT & _PWRTE_ON & _CP_OFF & _BOREN_ON
-GENERATOR
-RES_VECT CODE 0x0000; processor reset vector
-GOTO START; go to beginning of program
-
-; TODO ADD INTERRUPTS HERE IF USED
-
-MAIN_PROG CODE; let linker place main program
-START
-GOTO $ ; loop forever
-END
-```
-
-### Indirizzamento diretto e indiretto (come utilizzare FSR e INDF)
-
-1. **Diretto**: **l’indirizzo della RAM è direttamente contenuto nell’opcode**, quindi l’indirizzo viene dall’instruction register (che contiene l’opcode appena ricavato dal PC)  
-
-2. **Indiretto**: **l’indirizzo della RAM è già contenuto nel FSR** (File Select Register), di conseguenza l’opcode non deve contenere direttamente l’indirizzo nell’ISR ma il suo “indice” (come un puntatore). **Può essere utilizzato per non dover riscrivere più volte lo stesso codice per indirizzi diversi.** Ad esempio, al posto di `clear indirizzo1; clear indirizzo2; clear indirizzo3;`. basta incrementare il FSR e ripetere la stessa routine il numero necessario di volte.
-
-### Codice d'esempio sull'utilizzo di un FOR con FSR/INDF
-
-``` ASM
-CLRF 20h; cancella i dati all'indirizzo 20h
-CLRF 21h; cancella i dati all'indirizzo 21h
-:
-:
-CLRF 30h; cancella i dati all'indirizzo 30h
-```
-
-Come possiamo ottimizzare questa lunga sezione di codice? Vediamo come fare con FSR e INDF:
-
-``` ASM
-MOVLW 0x20; Sposto l'indirizzo di partenza in W
-MOVWF FSR; lo sposto nel FSR
-EXT CLRF INDF; pulisco il registro puntato utilizzando INDF 
-INCF FSR, f; incremento FSR
-BTFSS FSR, 5; il bit 5 è a 1? Allora sono passato a 3xh (in cui la x sta per una cifra qualsiasi) quindi nel nostro caso 30h
-GOTO NEXT; se non siamo ancora a 30h continua il loop - nota che questa istruzione non viene eseguita se la precedente istruzione è vera
 ```
 
 ## PIC 16
