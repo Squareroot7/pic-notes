@@ -82,7 +82,7 @@ Sono il metodo più diffuso per rappresentare numeri con segno in informatica. I
 
 ## ASSEMBLY  
 
-[instruction-set](img/instruction_set.png)
+![instruction-set](img/instruction_set.png)
 *istruzioni ASSEMBLY del pic16*
 
 ### Memoria e la suddivisione in banchi
