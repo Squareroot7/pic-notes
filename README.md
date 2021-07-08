@@ -44,7 +44,7 @@ Table of Contents
     * [ADC, assembly](#adc-assembly)
   * [Lezione 1](#lezione-1)
     * [GPIO](#gpio)
-      * [BISOGNA USARE PORT O LAT IN READ O WRITE?](#bisogna-usare-port-o-lat-in-read-o-write)
+      * [BISOGNA USARE PORT O LAT IN INPUT O OUTPUT?](#bisogna-usare-port-o-lat-in-input-o-output)
       * [EASYPIC BOARD SETUP](#easypic-board-setup)
   * [Lezione 2](#lezione-2)
     * [INTERRUPT](#interrupt)
@@ -282,10 +282,11 @@ Come possiamo ottimizzare questa lunga sezione di codice? Vediamo come fare con 
 ``` asm
 MOVLW 0x20; Sposto l'indirizzo di partenza in W
 MOVWF FSR; lo sposto nel FSR
-EXT CLRF INDF; pulisco il registro puntato utilizzando INDF 
-INCF FSR, f; incremento FSR
-BTFSS FSR, 5; il bit 5 è a 1? Allora sono passato a 3xh (in cui la x sta per una cifra qualsiasi) quindi nel nostro caso 30h
-GOTO NEXT; se non siamo ancora a 30h continua il loop - nota che questa istruzione non viene eseguita se la precedente istruzione è vera
+NEXT
+  EXT CLRF INDF; pulisco il registro puntato utilizzando INDF 
+  INCF FSR, f; incremento FSR
+  BTFSS FSR, 5; il bit 5 è a 1? Allora sono passato a 3xh (in cui la x sta per una cifra qualsiasi) quindi nel nostro caso 30h
+  GOTO NEXT; se non siamo ancora a 30h continua il loop - nota che questa istruzione non viene eseguita se la precedente istruzione è vera
 ```
 
 ## Esercitazione 1
@@ -322,7 +323,7 @@ Per accedere ad uno dei quattro banchi di memoria del microcontrollore, bisogna 
 
 ### Interazione con le porte
 
-Per impostar lo stato della porta, bisogna prima agire sul registo TRIS*, settando ad input o output con le istruzioni apposite (rispettivamente `BSF` e `BCF`) il relativo pin.
+Per impostar lo stato della porta, bisogna prima agire sul registo `TRIS`, settando ad input o output con le istruzioni apposite (rispettivamente `BSF` e `BCF`) il relativo pin.
 
 Successivamente si agisce sull'uscita effettiva della porta, sempre usando le due istruzioni, sul pin voluto della porta.
 
@@ -705,17 +706,16 @@ Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da
 6. Non dimenticare la routine di interrupt che è sempre identica:
 
 ``` C
-if(PIR1.CCP1IF){
-  if(CCP1CON.CCP1M0){            // If we are sensing the Rising-Edge
+if (PIR1.CCP1IF) {
+  if (CCP1CON.CCP1M0) {            // If we are sensing the Rising-Edge
     ta = ( CCPR1H << 8 ) + CCPR1L; // merge 8 and 8 bit in 16 bit
     CCP1CON.CCP1M0 = 0;            // Set Sense to Falling
-  }
-  else{                          // If we are sensing the Falling-Edge
+  } else {                          // If we are sensing the Falling-Edge
     tb = ( CCPR1H << 8 ) + CCPR1L;
     width = tb - ta;
     CCP1CON.CCP1M0 = 1;            // Set Sense to Rising
   }
-PIR1.CCP1IF = 0;
+  PIR1.CCP1IF = 0;
 }
 ```
 
@@ -841,7 +841,7 @@ Tutto ciò, da come possiamo immaginare, **non tiene assolutamente conto degli o
 
 ``` C
 void interrupt(){
-  if(PIR1.TMR1IF){
+  if (PIR1.TMR1IF) {
     //inserire condizione che abilita ovf_number++ quando ho intercettato il rising edge
     ovf_number++;
   }
@@ -932,7 +932,7 @@ ADCON0.GO_NOT_DONE = 1; // Start ADC Acquisition
 ![pwm](img/pwm.jpg)
 
 Il **PWM** è un modulo che permette di generare un’onda quadra con duty cycle variabile. Viene spesso usato per alimentare a diverse potenze un carico.
-**Il PWM ha due comparatori HIGH/LOW** 
+**Il PWM ha due comparatori HIGH/LOW**
 .  
 Il comparatore sotto setta l’Output, mentre il comparatore sopra lo resetta.
 
