@@ -15,6 +15,7 @@ Table of Contents
     * [Endianness](#endianness)
     * [Complementi](#complementi)
   * [ASSEMBLY](#assembly)
+    * [Operazioni eseguibili dal PIC16](#operazioni-eseguibili-dal-pic16)
     * [Memoria e la suddivisione in banchi](#memoria-e-la-suddivisione-in-banchi)
     * [Registri importanti](#registri-importanti)
       * [Quali istruzioni affliggono lo STATUS register?](#quali-istruzioni-affliggono-lo-status-register)
@@ -29,6 +30,14 @@ Table of Contents
     * [Codice di esempio con loop infinito](#codice-di-esempio-con-loop-infinito)
     * [Indirizzamento diretto e indiretto (come utilizzare FSR e INDF)](#indirizzamento-diretto-e-indiretto-come-utilizzare-fsr-e-indf)
     * [Codice d'esempio sull'utilizzo di un FOR con FSR/INDF](#codice-desempio-sullutilizzo-di-un-for-con-fsrindf)
+    * [Velocità di esecuzione delle istruzioni](#velocità-di-esecuzione-delle-istruzioni)
+  * [Esercitazione 1](#esercitazione-1)
+    * [Perché vengono usati dei condensatori?](#perché-vengono-usati-dei-condensatori)
+    * [Brown OUT](#brown-out)
+    * [Latch UP](#latch-up)
+    * [Oscillatori](#oscillatori)
+    * [Selezione del banco di memoria](#selezione-del-banco-di-memoria)
+    * [Interazione con le porte](#interazione-con-le-porte)
   * [Esercitazione 2](#esercitazione-2)
     * [Interazione con i registri](#interazione-con-i-registri)
   * [Esercitazione 3](#esercitazione-3)
@@ -706,7 +715,7 @@ In particolare il comando principale è ``Lcd_Out(riga, colonna, “cosa vuoi sc
 
 Quindi è importante ragionare sulla dimensione di questo array, che risulta essere un puntatore alla prima cella della stringa. Una ulteriore criticità nasce dal fatto che in C non esiste nessun metodo a runtime per conoscere la lunghezza di un vettore.  
 
-Quando viene dichiarata una queste stringhe in C bisogna usare per forza quello che si chiama *carattere di terminazione* `\0` e indica la terminazione di una stringa. Quando viene passata una stringa come variabile, il compilatore legge fino a `\0` e poi si ferma. Passando una stringa senza carattere terminatore, infatti, il microprocessore continuerebbe a leggere anche oltre la terminazione di memoria che non appartiene più alla variabile, potenzialmente creando un **segmentation fault**. 
+Quando viene dichiarata una queste stringhe in C bisogna usare per forza quello che si chiama *carattere di terminazione* `\0` e indica la terminazione di una stringa. Quando viene passata una stringa come variabile, il compilatore legge fino a `\0` e poi si ferma. Passando una stringa senza carattere terminatore, infatti, il microprocessore continuerebbe a leggere anche oltre la terminazione di memoria che non appartiene più alla variabile, potenzialmente creando un **segmentation fault**.
 
 In generale, bisogna inizializzare l'array **lunghezza stringa + 1**, proprio per la presenza del carattere terminatore.
 
