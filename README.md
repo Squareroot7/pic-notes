@@ -114,13 +114,16 @@ Non sarà quindi possibile eseguire nativamente operazioni quali moltiplicazioni
 ### Memoria e la suddivisione in banchi
 
 La memoria del microcontrollore è costituita da dei banchi di memoria in cui si trovano tutti i registri disponibili. Per una questione di indirizzamento, non viene utilizzata un'unica pagina di memoria piena di registri, ma si utilizzano 4 banchi separati.
-Da come si può vedere, questi banchi contengono dei registri ripetuti più volte. Infatti questi sono i registri più comuni, ed è molto comodo non cambiare banco ogni qual volta si vuole eseguire un'operazione con quei registri.
+
+Infatti, a causa della limitatezza nella dimensione della memoria (8 bit), non sarebbe possibile accedere a più di 2^8 (256) indirizzi memoria. Dividendo la memoria in banchi da 256 indirizzi e selezionando, all'occorrenza, il banco di memoria necessario tramite alterazione di un altro registro, è possibile lavorare con memorie più ampie (nel caso del PIC16, 1024 indirizzi).
+
+Come si può vedere, questi banchi contengono dei registri ripetuti più volte. Infatti questi sono i registri più comuni, ed è molto comodo non cambiare banco ogni qual volta si vuole eseguire un'operazione con uno di questi.
 
 ### Registri importanti
 
 Alcuni dei registri importanti in un PIC sono:
 
-* **PROGRAM COUNTER** *(PC)* è il registro che tiene traccia dell'indirizzo dell'istruzione corrente. È a sua volta composto da due registri, `PCL` e `PCH` Normalmente incrementa di 1 ad ogni istruzione, ma può essere manipolato dalle istruzioni di branch.
+* `PROGRAM COUNTER`*(PC)* è il registro che tiene traccia dell'indirizzo dell'istruzione corrente. È a sua volta composto da due registri, `PCL` e `PCH` Normalmente incrementa di 1 ad ogni istruzione, ma può essere manipolato dalle istruzioni di branch.
   * `PCL` contiene i bit da 0 7. È mappato in memoria ed è accessibile in lettura o in scrittura
   * `PCH` contiene i bit da 8 a 12. Non è accessibile direttamente in lettura o scrittura e deve essere manipolato tramite un meccanismo che coinvolge il registro `PCLATH`
 * `PCLATH` è il registro che fornisce i bit necessari all'istruzione di branch per effettuare il salto. I bit `<4:3>` vengono utilizzati nel `PCH` quando viene chiamata una istruzione `GOTO`.
@@ -733,8 +736,8 @@ Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORT
 ``` C
   // ******ISR SCORRETTO******
   void interrupt(){
-    if (INTCON.RBIF) //flag alzata da PORTB
-      INTCON.RBIF = 0; //Reset della flag
+    if (INTCON.RBIF) // flag alzata da PORTB
+      INTCON.RBIF = 0; // teset della flag
     // a questo punto accade il mismatch
     // non ho aggiornato PORTB prima di abbassare la flag
     if (PORTB.RB6) 
@@ -940,41 +943,45 @@ A seconda del compilatore, ```ta``` dovrà essere dichiarata come uint oppure ``
 
 ![adc](img/adc.jpg)
 
-L'**ADC funziona a 8 oppure 10 bit**.  
+L'ADC ha due modalità di funzionamento: a 8 oppure 10 bit  
 I suoi registri da impostare sono `ADCON0`, `ADCON1`, `ADCON2`.  
 
-* `ADCON0` serve a determinare attraverso i bit da 6 a 2 il pin scelto del microcontrollore per la conversione.  
-In particolare se voglio lavorare con il sonar uso `RC3(AN15)` che corrisponde ad `01111`.  Inoltre il bit `ADCON0.ADC_GO_NOT_DONE` fa partire la conversione se alto. Quando la conversione è completata torna a zero. Il bit `ADCON0.ADON` abilita l'ADC e deve essere impostato a 1.
+* `ADCON0` serve a determinare attraverso i bit da 6 a 2 il pin scelto del microcontrollore per la conversione.  Inoltre il bit `ADCON0.ADC_GO_NOT_DONE` fa partire la conversione se alto. Quando la conversione è completata torna a zero. Il bit `ADCON0.ADON` abilita l'ADC e deve essere impostato a 1.
+* `ADCON1` è invece il registro in cui vengono specificate le tensioni di alimentazioni. Durante lo svolgimento del corso, esso sarà alimentato 0/+5V e quindi semplicemente `ADCON1=0`.
+* `ADCON2` invece contiene il bit 7 (`ADFM`) che è legato alla giustificazione (dove vengono salvati i bit più significativi e dove i meno significativi). L'ADC sfrutta due registri (`ADRESH` e `ADRESL`) in cui verranno salvati i 10 bit risultanti dalla conversione. Esso contiene anche la selezione del numero di `Tad` (vedi sotto) e la frequenza che comanda l'`ADC`.
 
-* `ADCON1` è invece il registro delle alimentazioni. Noi di solito lo alimentiamo 0/+5V e quindi semplicemente `ADCON1=0`.
-* `ADCON2` invece contiene il bit 7 che è legato alla giustificazione (dove vengono salvati i bit più significativi e dove i meno significativi). L'ADC sfrutta due registri (`ADRESH` e `ADRESL`) in cui verranno salvati i 10 bit risultanti dalla conversione. Esso contiene anche la selezione del numero di `Tad` (vedi sotto) e la frequenza che comanda l'`ADC`.
+Usando l'*ADC* con risoluzione ad 8bit, non è importante dove sia posta la giustificazione, basta infatti ricordare di accedere al registro corretto per leggere il valore convertito. Esso sarà:
 
-Se usiamo l'**ADC** ad 8 bit non è importante giustificare a destra o sinistra, basta ricordare il registro corretto (HIGH/LOW, 8 bit ciascuno) che contiene il dato.  
+* `ADRESH` se `ADFM=0`
+* `ADRESL` se `ADFM=1`
 
-**Se invece lo voglio a 10 bit**, 2 bit saranno o nel registro High o nel registro Low e viceversa, a seconda di come viene giustificato.  
+Lavorando invece con risoluzione pari a 10 bit, bisognerà considerare i due registri. Infatti, il valore finale sarà:
 
-**I bit da 5 a 3 di ADCON2** permettono di impostare **il tempo d'acquisizione** (tempo di delay dopo che il condensatore del S&H viene bloccato, scandito in numero di Tad). Nel caso venga settato a 0 appena viene settato il bit GO dell'**ADC** parte immediatamente la conversione, la cui lunghezza verrà data da Tad.  
+* `ADRESH << 2 + ADRESL >> 6` se `ADFM=0`
+* `ADRESH << 6 + ADRESL` se `ADFM=1`
 
-**Nota attenzione che se l'acquisition time è zero e Tad troppo corto, la conversione non andrà a buon fine**. Quindi è sconsigliatissimo tenere l'acquisition time a zero.  
-Di solito si imposta ad un valore che superi almeno 7us quindi se ho un Tad di 1us posso impostare l'acquisition time a **16Tad**. Il datasheet riporta che servono almeno **11Tad per avere una conversione riuscita**.
+![adif](img/adif.png)
 
-Seleziona il prescaler di fosc per il modulo **ADC** e, come conseguenza setta la durata di 1 Tad (si può usare anche un clock di un oscillatore dedicato FRC che va a 600Khz.)  
+I bit da 5 a 3 di `ADCON2` permettono di impostare il tempo di acquisizione (tempo di delay dopo che il condensatore del S&H viene bloccato, scandito in numero di Tad).
+Nel caso venga portato a 0, appena viene impostato il bit `GO` dell'*ADC* esso partirà immediatamente con la conversione, la cui lunghezza verrà data da `Tad`.  
 
-**Nota** Tacqt è il tempo in cui il S&H è ancora agganciato al pin del PIC e quindi il condensatore  è ancora libero di caricarsi prima che intervenga Tad per iniziare l'acquisizione del valore.
+Se il tempo di acquisizione è zero o il `Tad` è troppo corto, la conversione non andrà a buon fine. Di conseguenza, sconsigliatissimo tenere il tempo di acquisizione a zero.
 
-**Nota** ricorda di configurare bene i **PORT** con **ANSELx=1** e **TRISx=1**
+Di solito si imposta ad un valore sia almeno pari a 7us. Quindi, considerando `Tad` pari ad 1us, è possibile impostare il tempo di acquisizione a 16 volte `Tad`. Il datasheet riporta che servono almeno 11 `Tad` per avere una conversione riuscita.
 
-**Nota** potrei anche tenere il buffer Input digitale acceso con **ANSELx=0** però consumerebbe potenza a caso, la conversione avviene correttamente a priori).
+Selezionare il prescaler per il modulo *ADC* è fondamentale per avere una temporizzazione corretta. È anche possibile usare un lock esterno.
 
-**Nota ADIF** è settato alla fine di ogni conversione a prescindere dall'interrupt abilitato o no
+`Tacqt` è il tempo in cui il *S&H* è ancora agganciato al pin del PIC e quindi il condensatore è ancora libero di caricarsi prima che intervenga `Tad` per iniziare l'acquisizione del valore.
 
-**Nota** il **ADC_GO_NOT_DONE** non deve essere messo nella stessa istruzione in cui viene acceso l'**ADC**.  
+Impostare sempre bene i registri relativi alla porta, `ANSELx=1` (per abilitare l'*ADC* sulla porta) e `TRISx=1` (per impostare la porta come input). Sarebbe anche possibile tenere il buffer di input digitale con `ANSELx=0` ma ciò porterebbe ad un consumo inutile di energia, in quanto la conversione avviene correttamente in ogni caso .**AD ESSERE ONESTO, NON HO CAPITO COSA SI INTENDESSE QUA**
 
-Esempio di configurazione dell'**ADC**:
+`AIDF`, il flag relativo all'interrupt scatenato dall'*ADC*, verrà settato alla fine di ogni conversione a prescindere dall'interrupt.
+
+Esempio di configurazione dell'*ADC*:
 
 ``` C
 // set TRIS here if needed
-ANSELC = 0b00001000;    //RC3 --> AN15
+ANSELC = 0b00001000;    // RC3 --> AN15
 ADCON2 = 0b10101110;
 //         +---------Right justified
 //           +++-----Tacquisition = 12Tad
@@ -993,119 +1000,131 @@ ADCON0.GO_NOT_DONE = 1; // Start ADC Acquisition
 
 ![pwm](img/pwm.jpg)
 
-Il **PWM** è un modulo che permette di generare un'onda quadra con duty cycle variabile. Viene spesso usato per alimentare a diverse potenze un carico.
-**Il PWM ha due comparatori HIGH/LOW**.  
-Il comparatore sotto setta l'Output, mentre il comparatore sopra lo resetta.
+Il *PWM* è un modulo che permette di generare un'onda quadra con duty cycle variabile. Viene spesso usato per alimentare a diverse potenze un carico. Il PWM ha due comparatori: *HIGH* e *LOW*.  
+Il primo resetta l'output, mentre il comparatore sopra lo imposta.
 
-Un problema costruttivo di questa scheda è legato al fatto che **abbiamo un PIC che lavora ad 8 bit ma abbiamo un pwm che formalmente lavora a 10**. Come è possibile?  
-Sono riusciti ad ottenere 1024 valori di quantizzazione possibile in questa maniera: Se il registro **CCPRxH**  è da **8 bit, i due bit mancanti per renderlo da dieci bit vengono presi dai bit meno significativi di un altro registro e vengono affiancati nella parte meno significativa del nostro registro**.  
-Parliamo della implicazione di frequenza e come fanno i comparatori a comparare un valore a 10 bit: Anche al 2, che di solito funziona ad 8 bit, sono stati aggiunti due bit per fare la comparazione con il valore nel registro **CCPRxH**.  
-Ovviamente **i bit aggiuntivi vanno ad una frequenza 4 volte superiore rispetto a quella a cui funzionava il timer** (se invece li avessimo messi nei bit più significativi, clockati a 256 volte superiore se bit MSB e frequenza più bassa di 4 volte).  
+Un problema costruttivo di questa scheda è legato al fatto che il PIC lavora ad 8 bit ma il pwm che formalmente lavora a 10.
+È stato possibile ottenere 1024 valori (10 bit) di quantizzazione in questa maniera:
 
-**La max frequenza è fosc/4**, per questo motivo per coordinare i due bit del timer **c'è un contatore dedicato che lavora ad fosc**.  
-Inoltre, per questo motivo, legato al coordinamento in frequenza dei bit LSB del TIMER2 **il prescaler è disponibile solo ad 1, 4 o 16**.  
-**CCPRxL** è l'unico registro. **Tup (parte alta del duty cycle) è segnato da CCPRxL** che consiste in un AND con i due bit del CCPxCON. Il risultato è che il nostro “timer” è come se fosse 10 bit e andasse a fosc grazie ai due bit aggiuntivi.
+1. Dal registro `CCPRxL` provengono gli 8 bit più significativi (MSB)
+1. Dal registro `CCPxCON` provengono gli altri 2 bit meno significativi (LSB)
 
-Facciamo un esempio settando **PRx=5 CCPRxL=2**:  
-supponiamo **TMRx=0** e l'uscita è HIGH. Il timer conta e arriva a 5 (valore di PR).
+La frequenza massima di lavoro è `Fosc / 4`, quindi per coordinare i due bit del timer c'è un contatore dedicato che lavora ad una frequenza pari a quella di clock (`Fosc`). Per motivi legati al coordinamento tra gli MSB e gli LSB del timer, il prescaler è impostabile unicamente a 1, 4 o 16.
 
-1. **Il comparatore sotto scatta**
-2. **porta l'uscita ad alto** quando raggiunge 5
-3. copia **CCPRxL** in **CCPRxH**
-4. resetta **TMRx**.  
+Esempio: impostando `PRx=5`. `CCPRxL=2`, si suppone `TMRx=0` e l'uscita è *bassa*. Il timer conta e arriva a 5 (valore di PR). Allora, in questo momento:
 
-Quindi, con l'uscita alta, TMRx riparte a contare. Ad un certo punto conta fino a 2 che è il valore di **CCPRxH**.
+1. Il comparatore *LOW* commuta
+1. L'uscita viene portata ad *alto*
+1. `CCPRxL` viene copiato in in `CCPRxH`
+1. `TMRx` viene resettato
 
-1. **porta l'uscita a basso** grazie al flip flop
-2. **TMRx continua a contare** fino a che non raggiunge 5
-3. **l'onda viene riportata alta** e quindi si ripete il ciclo appena descritto.
+Quindi, con l'uscita alta, `TMRx` riparte a contare, fino ad arrivare a 2 (valore impostato in `CCPRxH`). Allora:
 
-**Il tempo totale del ciclo è PRx+1** perché l'onda ci mette un colpo di clock a tornare alta.
+1. Il comparatore *HIGH* commuta
+1. L'uscita viene portata a *basso*
+1. `TMRx` riprende a contare finché non arriva a 5
+1. Il ciclo riparte da capo.
 
-**Come aumento la frequenza** Diminuisco PRx -> **la risoluzione diminuisce**.  
-La risoluzione del **CCP** viene dettata da PRx (Nota: se ho PR=5 ho solo 5 passi modificabili). Ho risoluzione massima con prescaler a 1 f=fosc/4. Di conseguenza ogni passo è 125ns con un osc di 32M. Avessimo un prescaler di 16 allora:  
-```125ns * 16 = 2us```  
+Agendo sul prescaler, è possibile influenzare la frequenza dell'onda quadra. Infatti aumentando `PRx` (quindi il valore del prescaler), la frequenza di commutazione diminuisce.
 
-Vado ora a definire il duty cycle  
-```duty cycle=CCPL/PRx``` (in cui PRx è un registro a 8 bit)
+La risoluzione del *CCP* viene impostata dal registro `PRx` (*nota* con `PR=5` si avranno solo 5 passi modificabili).
 
-Per il PWM ho solo due moduli CCP (4/5) che ne permettono l'utilizzo. Come posso sviare da questo? Mi costruisco un **PWM software** utilizzabile su praticamente qualsiasi pin del uC, come nell'esempio seguente:
+La risoluzione massima con prescaler a 1 è pari a `fosc/4`. Di conseguenza ogni passo è 125ns con una frequenza di oscillazione di 32Mhz. Se il prescaler fosse impostato a 16, allora il periodo del PWM sarebbe `125ns * 16 = 2us`.
+
+Il corrispondente duty cycle sarà pari a `CCPRxL/PRx`.
+
+Per il PWM, il PIC offre solo due moduli moduli *CCP* (4/5) che ne permettono l'utilizzo. Nel caso fosse necessario pilotare più di due pin in questo modo, sarà necessario impostare un PWM software. Di seguito è riportato un esempio di questo codice.
 
 ``` C
-unsigned short int pwm_cnt=0;
-unsigned int time_cnt1=0, time_set1 = 100;
-void main() {  
-  unsigned short int pwm_period=255, //set del periodo del pwm
-  hi_period=5;           //set della parte HI del pwm (  1  <  hi_period  <  pwm_period  )
-  TRISD=0;           //setto la porta D come output
-  LATD=1;            //butto tutto a zero
-  T0CON=  0b11000000;    //attiva timer, attivalo a 8 bit e attivalo a 256 prescaler
-  INTCON= 0b10100000;    //attiva timer 0 interrupt
-  while(1){
-     if(pwm_cnt<=hi_period) LATD.RD0=1; //se sono ancora nella parte alta del pwm
-           else LATD.RD0=0;                   // toggle del pin verso la parte bassa
-           if(pwm_cnt==pwm_period) pwm_cnt=0; // reset del periodo pwm
-           if(time_cnt1==time_set1) {         // cambio del duty cycle
-              time_cnt1=0;
-              hi_period++;                    // incrementa duty cycle
-              if(hi_period==pwm_period) hi_period=0;    //se il periodo hi raggiunge il periodo completo, torna a zero
-           }
+unsigned short int pwm_cnt = 0;
+unsigned int time_cnt1 = 0, time_set1 = 100;
+void main()
+{
+  unsigned short int pwm_period = 255, // set del periodo del pwm
+      hi_period = 5;                   // set della parte HI del pwm (  1  <  hi_period  <  pwm_period  )
+  TRISD = 0;                           // imposto la porta D come output
+  LATD = 0;                            // porto tutto a zero
+  T0CON = 0b11000000;                  // attiva timer, attivalo a 8 bit e attivalo a 256 prescaler
+  INTCON = 0b10100000;                 // attiva timer 0 interrupt
+  while (1)
+  {
+    if (pwm_cnt <= hi_period)
+      LATD.RD0 = 1; // se sono ancora nella parte alta del pwm
+    else
+      LATD.RD0 = 0; // inverto del pin verso la parte bassa
+    if (pwm_cnt == pwm_period)
+      pwm_cnt = 0; // reset del periodo pwm
+    if (time_cnt1 == time_set1)
+    { // cambio del duty cycle
+      time_cnt1 = 0;
+      hi_period++; // incrementa duty cycle
+      if (hi_period == pwm_period)
+        hi_period = 0; // se il periodo hi raggiunge il periodo completo, torna a zero
+    }
   }
 }
 
-void interrupt(){        // ISR
-   if(INTCON.TMR0IF) {   // con questo prescaler, entra circa ogni 8ms
-      pwm_cnt++;         // incrementa contatore del periodo del pwm
-      time_cnt1++;       // incrementa contatore del ciclo di cambio duty cycle
-      INTCON.TMR0IF=0;   // reimpostare i flag sempre alla fine del codice
-   }
+void interrupt()
+{ // ISR
+  if (INTCON.TMR0IF)
+  {                    // con questo prescaler, entra circa ogni 8ms
+    pwm_cnt++;         // incrementa contatore del periodo del pwm
+    time_cnt1++;       // incrementa contatore del ciclo di cambio duty cycle
+    INTCON.TMR0IF = 0; // reimpostare i flag sempre alla fine del codice
+  }
 }
 ```
 
-Se invece volessi usare entrambi i moduli PWM, avrei l'uscita su **RE2** e **RD1**. Ecco l'esempio che fa utilizzo dei **TIMER2/TIMER4** (**Nota**: posso anche associare due moduli PWM allo stesso timer)
+Se invece fosse necessario usare entrambi i moduli *PWM*, avrei l'uscita su `RE2` e `RD1`. Di seguito, è riportato un esempio di codice che implementa questa funzione tramite `TIMER2` e `TIMER4`. Da notare che si possono associare ambedue i moduli allo stesso timer.
 
 ``` C
-void main() {
-     unsigned short int dir=1;
-     //vedi pinout table nel datasheet per vedere a quale pin viene associato quale CCP
-     TRISE.RE2=1;  //DISATTIVO output per impostare ccp5
-     TRISD.RD1=1;  //DISATTIVO output per impostare ccp4
-     //----TMR2----
-     T2CON=0b00000100;
-     //      +++++-----postscaler (lascia sempre 0)
-     //            +----timer on   (sempre a 1 per accendere il timer)
-     //             ++--prescaler  (se c'è bisogno di cambio frequenza, cambiare prescaler)
-     PR2=255;   // periodo pwm
-     //----TMR4----
-     T4CON=0b00000110;
-     PR4=255;
-     //----CCP MODULES SETUP----
-     CCP4CON=  0B00001100;
-     //              ++----impostare QUESTI DUE PER PWM MODE, TUTTI GLI ALTRI BIT A ZERO
-     CCP5CON=0x0F; //settato bit0/1 HIGH perché non vengono usati
+void main()
+{
+  unsigned short int dir = 1;
+  // vedi pinout table nel datasheet per vedere a quale pin viene associato quale CCP
+  TRISE.RE2 = 1; // DISATTIVO output per impostare ccp5
+  TRISD.RD1 = 1; // DISATTIVO output per impostare ccp4
 
-     //dobbiamo configurare quale timer abbiamo associato al nostro CCP. Setta timer2 in ccptmrs
-     CCPTMRS1= 0b00000001;   //associo timer2 a CCP55,  associo timer4 a CCP4
+  T2CON = 0b00000100;
+  //      +++++-----postscaler (lascia sempre 0)
+  //            +----timer on   (sempre a 1 per accendere il timer)
+  //             ++--prescaler  (se c'è bisogno di cambio frequenza, cambiare prescaler)
+  PR2 = 255; // periodo pwm
+  //----TMR4----
+  T4CON = 0b00000110;
+  PR4 = 255;
+  //----CCP MODULES SETUP----
+  CCP4CON = 0B00001100;
+  //              ++----impostare QUESTI DUE PER PWM MODE, TUTTI GLI ALTRI BIT A ZERO
+  CCP5CON = 0x0F; //settato bit0/1 HIGH perché non vengono usati
 
-     CCPR5L= 64; // un quarto di duty cycle
-     CCPR4L= 64; // un quarto di duty cycle
+  //dobbiamo configurare quale timer abbiamo associato al nostro CCP. Setta timer2 in ccptmrs
+  CCPTMRS1 = 0b00000001; //associo timer2 a CCP55,  associo timer4 a CCP4
 
-     TRISE.RE2=0;     // resetto i pin in uscita per attivare il pwm
-     TRISD.RD1=0;
+  CCPR5L = 64; // un quarto di duty cycle
+  CCPR4L = 64; // un quarto di duty cycle
 
-     while(1){ // fade in e out dei led
-       if(dir==0){
-         CCPR5L++;
-         CCPR4L++;
-       }
-       else {
-       CCPR5L--;
-       CCPR4L--;
-       }
-       if(CCPR5L==255) dir=1;
-       else if(CCPR5L==0) dir=0;
-       delay_ms(4);
-     }
+  TRISE.RE2 = 0; // resetto i pin in uscita per attivare il pwm
+  TRISD.RD1 = 0;
+
+  while (1)
+  { // fade in e out dei led
+    if (dir == 0)
+    {
+      CCPR5L++;
+      CCPR4L++;
+    }
+    else
+    {
+      CCPR5L--;
+      CCPR4L--;
+    }
+    if (CCPR5L == 255)
+      dir = 1;
+    else if (CCPR5L == 0)
+      dir = 0;
+    delay_ms(4);
+  }
 }
 ```
 
