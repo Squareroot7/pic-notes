@@ -1,4 +1,4 @@
-﻿# pic-notes
+﻿# Microcontrollori-notes
 
 Appunti del corso di microcontrollori, Politecnico di Milano, 2020-2021.
 
@@ -120,36 +120,36 @@ Da come si può vedere, questi banchi contengono dei registri ripetuti più volt
 
 Alcuni dei registri importanti in un PIC sono:
 
-* **PROGRAM COUNTER** *(PC)* è il registro che tiene traccia dell'indirizzo dell'istruzione corrente. È a sua volta composto da due registri, **PCL** e **PCH**. Normalmente incrementa di 1 ad ogni istruzione, ma può essere manipolato dalle istruzioni di branch.
-  * **PCL** contiene i bit da 0 7. È mappato in memoria ed è accessibile in lettura o in scrittura
-  * **PCH** contiene i bit da 8 a 12. Non è accessibilie direttamente in lettura o scrittura e deve essere manipolato tramite un meccanismo che coinvolge il registro **PCLATH**
-* **PCLATH** è il registro che fornisce i bit necessari all'istruzione di branch per effettuare il salto. I bit `<4:3>` vengono utilizzati nel **PCH** quando viene chiamata una istruzione `GOTO`.
-* **W** *(working register)* registro usato come operando nelle operazioni della ALU, sia come sorgente che come destinazione. Può anche essere manipolato direttamente poiché è mappato nella RAM.
-* **FSR** contiene l'indirizzo di memoria a cui punta il registro *INDF*. É mappato nella RAM.
-  * **INDF** è un registro virtuale che punta all'indirizzo contenuto in *FSR*. Può essere manipolato come un normale registro e viene usato per l'indirizzamento indiretto.
-* **OPTION** contiene vari bit di controllo per configurare:
+* **PROGRAM COUNTER** *(PC)* è il registro che tiene traccia dell'indirizzo dell'istruzione corrente. È a sua volta composto da due registri, `PCL` e `PCH` Normalmente incrementa di 1 ad ogni istruzione, ma può essere manipolato dalle istruzioni di branch.
+  * `PCL` contiene i bit da 0 7. È mappato in memoria ed è accessibile in lettura o in scrittura
+  * `PCH` contiene i bit da 8 a 12. Non è accessibile direttamente in lettura o scrittura e deve essere manipolato tramite un meccanismo che coinvolge il registro `PCLATH`
+* `PCLATH` è il registro che fornisce i bit necessari all'istruzione di branch per effettuare il salto. I bit `<4:3>` vengono utilizzati nel `PCH` quando viene chiamata una istruzione `GOTO`.
+* `W` *(working register)* registro usato come operando nelle operazioni della ALU, sia come sorgente che come destinazione. Può anche essere manipolato direttamente poiché è mappato nella RAM.
+* `FSR` contiene l'indirizzo di memoria a cui punta il registro `INDF`. É mappato nella RAM.
+* `INDF` è un registro virtuale che punta all'indirizzo contenuto in `FSR`. Può essere manipolato come un normale registro e viene usato per l'indirizzamento indiretto.
+* `OPTION` contiene vari bit di controllo per configurare:
   * il *pull-up* della porta B (bit 7)
   * l'*edge* dell'interrupt sulla porta B (*rising* o *falling*, bit 6)
   * la sorgente del clock del TIMER 0 (transizione sul pin RA4/T0CKI o clock interno, bit 5)
   * l'*edge* dell'interrupt sul pin RA4/T0CKI B (*rising* o *falling*, bit 4)
   * il *prescaler* del TIMER 0 (bit 3)
   * il *postscaler* del WATCHDOG (bit 2-0)
-* **STATUS** è il registro che può essere definito come il più importante del microcontrollore. Esso contiene i bit usati per:
-  * l'indirizzamento indiretto (bit 7, **IRP**)
-  * l'indirizzamento diretto  (bit 6-5, **RP1:RP0**)
+* `STATUS` è il registro che può essere definito come il più importante del microcontrollore. Esso contiene i bit usati per:
+  * l'indirizzamento indiretto (bit 7, `IRP`
+  * l'indirizzamento diretto  (bit 6-5, `RP1:RP0`
   * segnalare il *TIME OUT* (bit 4)
   * segnalare il *POWER DOWN* (bit 3)
-  * segnalare se l'ultima operazione eseguita dalla ALU (aritmetica o logica) ha risultato zero (bit 2, **Z**)
-  * segnalare se c'è stato un carry **dal quarto bit in giù (quindi nel secondo nibble)** nell'ultima operazione eseguita dalla ALU (bit 1, **DC**)
-  * segnalare se c'è stato un carry nell'ultima operazione eseguita dalla ALU  (bit 0, **C**)
+  * segnalare se l'ultima operazione eseguita dalla ALU (aritmetica o logica) ha risultato zero (bit 2, `Z`)
+  * segnalare se c'è stato un carry **dal quarto bit in giù (quindi nel secondo nibble)** nell'ultima operazione eseguita dalla ALU (bit 1, `DC`)
+  * segnalare se c'è stato un carry nell'ultima operazione eseguita dalla ALU  (bit 0, `C`)
 
 #### Quali istruzioni affliggono lo STATUS register?
 
-* Tutte le operazioni di *addizione* (`ADDWF`, `ADDLW`), *sottrazione* (`SUBWF`, `SUBLW`) affliggono i bit **C** (carry) **DC** (digit carry) **Z** (Zero bit)
-* Le *rotate left* e *rotate right* (`RLF`, `RRF`) affliggono il bit **C** (carry) perché hanno bisogno di 1 bit da salvare per lo shift
+* Tutte le operazioni di *addizione* (`ADDWF`, `ADDLW`), *sottrazione* (`SUBWF`, `SUBLW`) affliggono i bit `C` (carry) `DC` (digit carry) `Z` (zero)
+* Le *rotate left* e *rotate right* (`RLF`, `RRF`) affliggono il bit `C` (carry) perché hanno bisogno di 1 bit da salvare per lo shift
 
-* Tutte le operazioni di *incremento* e *decremento* non condizionali affliggono il bit **Z**
-* Le operazioni logiche `ANDWF`, `CLEARF`, `CLEARW`, `COMF`, `IORWF`, `MOVF`, `XORWF`, `ANDLW`, `IORLW`, `XORLW` affliggono il bit **Z**
+* Tutte le operazioni di *incremento* e *decremento* non condizionali affliggono il bit `Z`
+* Le operazioni logiche `ANDWF`, `CLEARF`, `CLEARW`, `COMF`, `IORWF`, `MOVF`, `XORWF`, `ANDLW`, `IORLW`, `XORLW` affliggono il bit `Z`
 
 * Tutte le operazioni rimanenti non affliggono lo `STATUS` (per esempio, lo swap dei nibbles)
 
@@ -170,10 +170,10 @@ Il `PCLATH` non è coinvolto da queste operazioni e quindi non viene mai aggiunt
 
 ### Salti e return in assembly
 
-* `GOTO XXX`: Salto assoluto. Aggiorna il PC ad un'etichetta designata. La dimensione dell'indirizzo dell'etichetta è di 11 bit. È sensibile al paging, infatti il bit 12 e 13 vengono letti da **PCLATH**. Quindi sarà necessario usare l'istruzione `BANKSEL` oppure modificare il **PCH**. Nei PIC18 il PC è a 21 bit assoluti e il `GOTO` è a 20bit; quindi può spostare l'esecuzione ovunque in 2M di memoria (in due cicli), ma c'è il problema del paging con `PCLATU` (non più H)
-* `BRA XXX`: Salto relativo. Posso spostarmi di massimo ±1023 posizioni dall'indirizzo di partenza. Essendo un salto condizionale partendo dal valore del PC corrente, non è affetto dal paging (non è disponibile nei PIC16).
-* `RETFIE`: specifica il return dall'interrupt (quindi sposta quello che c'era nel Top Of Stack nel PC) e riattiva il general interrupt GIE (che è stato disattivato all'ingresso della routine dell'interrupt).
-* `CALL`: va all'etichetta, esattamente come il goto, quindi è affetto da paging (USARE BANKSEL). Si salva nello stack il PC corrispondente alla posizione di chiamata. Appena la routine chiamata dal CALL, il PC viene rishiftato al chiamante.
+* `GOTO XXX`: salto assoluto. Aggiorna il PC ad un'etichetta designata. La dimensione dell'indirizzo dell'etichetta è di 11 bit. È sensibile al paging, infatti il bit 12 e 13 vengono letti da `PCLATH`. Quindi sarà necessario usare la direttiva `BANKSEL` oppure modificare il registro `PCH`. Nei PIC18 il PC è a 21 bit assoluti e il `GOTO` è a 20bit; quindi può spostare l'esecuzione ovunque in 2M di memoria (in due cicli), ma c'è il problema del paging con `PCLATU` (non più H)
+* `BRA XXX`: salto relativo. Ci si può spostare di massimo ±1023 posizioni dall'indirizzo di partenza. Essendo un salto condizionale partendo dal valore del PC corrente, non è affetto dal paging (non è disponibile nei PIC16).
+* `RETFIE`: specifica il return dall'interrupt (quindi sposta quello che c'era nel Top Of Stack nel `PC`) e riattiva il general interrupt `GIE` (che è stato disattivato all'ingresso della routine dell'interrupt).
+* `CALL`: va all'etichetta, esattamente come il goto, quindi è affetto da paging (sarà necessario quindi usare la direttiva `BANKSEL`). Salva nello stack il `PC` corrispondente alla posizione di chiamata. Appena la routine chiamata dal `CALL` termina, il `PC` viene riportato all'indirizzo chiamante.
 
 ### Direttive asm
 
@@ -193,7 +193,7 @@ Il `PCLATH` non è coinvolto da queste operazioni e quindi non viene mai aggiunt
 ### Scrivere programmi in pseudo codice
 
 Un processo alla base della scrittura di algoritmi per i neofiti della programmazione è lo sviluppo iniziale in pseudo-codice.
-Pur essendo all'apparenza *"troppo base e scontato"*, questo è un ottimo metodo sia per pensare all'algoritmo che per debuggare in caso di ricontrollo del codice!
+Pur essendo all'apparenza *"troppo base e scontato"*, questo è un ottimo metodo sia per formalizzare l'algoritmo, sia in fase di debug per ricontrollare codice!
 Facciamo immediatamente un esempio (tenendo a mente le istruzioni del PIC16):
 
 Vogliamo comparare due variabili `B` e `A`, ponendo come condizione vera quando `B` è maggiore di `A`. In linguaggio C tutto ciò è intuitivo:
@@ -362,7 +362,7 @@ Si innesca quindi il processo di **Brown out reset (BOR)**, i seguenti effetti:
 
 ### Latch UP
 
-Situazione che si verifica quando abbastanza corrente scorre attraverso il bulk di un transitor *cMOS*, causando una caduta di tensione sufficiente da attivare uno dei *BJT* parassiti che si vanno a creare a cavallo delle zone *n+* e *p+*. È anche causata, seppur più raramente, da scariche elettrostatiche (ESD) o da radiazione ionizzante.
+Situazione che si verifica quando abbastanza corrente scorre attraverso il bulk di un transistor *cMOS*, causando una caduta di tensione sufficiente da attivare uno dei *BJT* parassiti che si vanno a creare a cavallo delle zone *n+* e *p+*. È anche causata, seppur più raramente, da scariche elettrostatiche (ESD) o da radiazione ionizzante.
 
 ### Oscillatori
 
@@ -428,7 +428,7 @@ BSF INTCON,GIR ; attiva la IRQ su tutto il dispositivo
 
 ```
 
-All'interno dell'interrupt routine bisognerà disattivare la `IRQ` su tutto il microcontrollore in modo da evitare l'interruzione della stessa a seguito di un altro interrupt. Inoltre, bisogna sempre leggere il valore sulla porta che ha scatenato l'interrupt in modo da porterla disabilitare e resettare il bit `RBIF`.
+All'interno dell'interrupt routine bisognerà disattivare la `IRQ` su tutto il microcontrollore in modo da evitare l'interruzione della stessa a seguito di un altro interrupt. Inoltre, bisogna sempre leggere il valore sulla porta che ha scatenato l'interrupt in modo da poterla disabilitare e resettare il bit `RBIF`.
 Infine, per ritornare alla routine principale si usa l'istruzione `RETFIE`.
 
 Per abilitare i pull-up interni (nelle porte supportate) bisogna abbassare il pin 7 del registro `OPTION_REG` nel banco 1.
@@ -475,7 +475,7 @@ I registri coinvolti sono:
 
 | Uso         | TRIS          | ANSEL          |
 |:------------|:--------------|:---------------|
-| Digital Out | TRISx.pin = 0 | dontcare       |
+| Digital Out | TRISx.pin = 0 | don't care     |
 | Digital In  | TRISx.pin = 1 | ANSELx.pin = 0 |
 | Analog In   | TRISx.pin = 1 | ANSELx.pin = 1 |
 
@@ -510,11 +510,11 @@ Cambiando `RB1` da digital output a digital input, suppongo che `LATB.RB1=1` com
 
 #### EASYPIC BOARD SETUP
 
-* `PORTA`: usata per aggiungere pulsanti e per fare polling. RA7-RA7 Connessi all'oscillatore.
-* `PORTB`: quasi interamente dedicata al LCD. IOCB disponibile da RB7-RB4, LCD connesso da RB5-RB0. **NOTA**: `RB6` e `RB7` vanno fuori uso con il debugger ON.
+* `PORTA`: usata per aggiungere pulsanti e per fare polling. `RA7`-`RA7` Connessi all'oscillatore.
+* `PORTB`: quasi interamente dedicata al LCD. `IOCB` disponibile da RB7-RB4, LCD connesso da `RB5`-`RB0`. **NOTA**: `RB6` e `RB7` vanno fuori uso con il debugger ON.
 * `PORTC`: poco spesso usata per altri scopi se non per il modulo sonar.
-* `PORTD`: spesso usata per operazioni con i led (tutta la porta). RD1 PWM.
-* `PORTE`: usata per un PWM, PWM software o per dei led di segnalazione. RE2 PWM, RE3 MCRL.
+* `PORTD`: spesso usata per operazioni con i led (tutta la porta). `RD1` ha la funzione PWM.
+* `PORTE`: usata per un PWM, PWM software o per dei led di segnalazione. `RE2`  ha la funzione PWM, `RE3` MCRL (reset esterno).
 
 ## Lezione 2
 
@@ -541,7 +541,7 @@ Ci sono 2 registri da usare per gestire l'interrupt:
 1. `IE` (interrupt enable), serve ad attivare globalmente l'interrupt. Se è riferita all'intero sistema e non ad un singolo componente, si chiama anche `GIE` (global interrupt enable)
 1. `IF` (interrupt flag), serve a capire quale entità ha scatenato l'interrupt
 
-Dopodichè è necessario definire una `ISR` (interrupt service routine), cioè la funzione che verrà chiamata quando l'interrupt viene causato. Essa deve essere quanto più leggera e veloce possibile, poichè una ISR di durata considerevole può creare problemi alla corretta esecuzione del programma principale.
+Dopodiché è necessario definire una `ISR` (interrupt service routine), cioè la funzione che verrà chiamata quando l'interrupt viene causato. Essa deve essere quanto più leggera e veloce possibile, poiché una ISR di durata considerevole può creare problemi alla corretta esecuzione del programma principale.
 
 L'intero processo di interrupt può essere quindi diviso in due fasi:
 
@@ -598,7 +598,7 @@ Il **tempo di interrupt** si ottiene semplicemente invertendo la formula:
 
 ```t_max = ( 4 * 256 * ( 256 - TMR0L ) ) / f_osc```
 
-**4/32MHz = 1/8MHz corrispondono a 125 ns. Questo è fisso (a meno di disabilitare il PLL)**. Il risultato finale del tempo massimo dà 8.192 ms *(all'esame, 8ms è una approsimazione più che sufficiente)*. Se si volesse avere più precisione ci sono 2 opzioni:
+**4/32MHz = 1/8MHz corrispondono a 125 ns. Questo è fisso (a meno di disabilitare il PLL)**. Il risultato finale del tempo massimo dà 8.192 ms *(all'esame, 8ms è una approssimazione più che sufficiente)*. Se si volesse avere più precisione ci sono 2 opzioni:
 
 * Salvare il valore del tempo di interrupt utilizzando un `long int` e tenendo, per esempio, in conto che ogni interrupt avviene ogni 8192ms:
   1. Scegliere il prescaler
@@ -612,7 +612,7 @@ Il **tempo di interrupt** si ottiene semplicemente invertendo la formula:
 
 Osservando il datasheet si nota che all'interno del registro TxCON è presente un bit (*TxRD16) che fa riferimento a **modalità 16bit o 2x8**.  
 
-È certamente possibile utilizzare i timer di indice dispari a 8 bit, ma è necessaria una delle seguenti opearazioni:
+È certamente possibile utilizzare i timer di indice dispari a 8 bit, ma è necessaria una delle seguenti operazioni:
 
 1. Usare solo gli 8 bit più significativi del registro in modo tale da poter comunque sfruttare l'overflow una volta pieno il timer. *(Il registro è da 16 bit)*
 1. Sfruttare la **modalità 2x8**  
@@ -746,10 +746,10 @@ Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORT
   // ******ISR CORRETTO******
   void interrupt(){
     if(INTCON.RBIF){ // flag alzata da PORTB
-    if(PORTB.RB6)} i++; // leggo PORTB ->Flip Flop aggiornato!
+    if(PORTB.RB6)} i++; // leggo PORTB -> Flip Flop aggiornato!
     if(PORTB.RB) i--; // altro refresh di PORTB
     INTCON.RBIF=0; //Reset della flag
-    // a questo punto ho PORTB refreshato -> NO mismatch
+    // a questo punto ho PORTB aggiornato -> NO mismatch
     // non entro nella ISR una seconda volta  
   }
 ```
@@ -764,7 +764,7 @@ Utilizzo del sonar. Quando si intende utilizzare il sonar, le cose importanti da
 2. Il sonar si appoggia al Timer **TXCON** change sovrascrive i dati nel registro del capture **CCPXCON** da 16 bit, suddiviso nei registri **CCPXH** e **CCPXL** (8 bit), high e low rispettivamente. I timer dispari vengono usati **Capture and Compare** mentre per i timer pari vengono usati per il **PWM**. Si imposta il timer con il registro **CCPTMRS0**.
 3. È una periferica del uC, quindi per attivarne l'interrupt **INTCON.PEIE=1** (non dimenticare il general **INTCON.GIE=1**)
 4. L'attivazione degli interrupt non è solo legata al registro **INTCON** ma anche ai registri **PIEX** e **PIRX**. Bisogna cercare il numero corretto del registro a cui sostituire la X. **Esistono cinque registri per gli interrupt**.
-5. Se vuoi lo stream continuo dei dati imposta **LATC.RC6=1**, inoltre deve essere digital Output, quindi TRISC del bit 6 è alto sempre; Gli altri bit si possono mettere benissimo in modalità Input, in particolare **RC2** o **RC3** (digial/analog)
+5. Se vuoi lo stream continuo dei dati imposta **LATC.RC6=1**, inoltre deve essere digital Output, quindi TRISC del bit 6 è alto sempre; Gli altri bit si possono mettere benissimo in modalità Input, in particolare **RC2** o **RC3** (digital/analog)
 6. Non dimenticare la routine di interrupt che è sempre identica:
 
 ``` C
@@ -892,7 +892,7 @@ void interrupt(){
 Di certo questo non è il caso del Sonar dato che il **tempo di overflow del TIMER1 è molto maggiore di quello del gradino in uscita dal sonar**.  
 Il caso di un overflow singolo è già stato trattato e, da come sappiamo, viene **"risolto" completamente dall'ALU**.  
 Quello che non viene gestito dall'ALU è invece un **overflow multiplo durante la misura**.  
-Infatti se mantenessimo il sistema come per il SONAR, la misura temporale finale sarebbe **errata**. Vediamo perchè succede questo:
+Infatti se mantenessimo il sistema come per il SONAR, la misura temporale finale sarebbe **errata**. Vediamo perché succede questo:
 Se non tenessimo conto del numero di volte di overflow del **TIMER1** la misura finale corrisponderebbe a due intervalli:
 
 1. Tempo passato dal **primo rising edge** al **primo overflow**
@@ -930,10 +930,10 @@ Quando si eseguono operazioni di shift e somma che potrebbero essere fatte in pi
    ta+=ovf_number<<16;
 ```
 
-è buona regola essere abbondanti di parentesi per **essere** sicuri che il compilatore stia effettivamente facendo le operazioni desiderate e che non stia mescolando operazioni portando a errori che spesso e volentieri sono **ostici da debuggare**.  
+è buona regola essere abbondanti di parentesi per **essere** sicuri che il compilatore stia effettivamente facendo le operazioni desiderate e che non stia mescolando operazioni portando a errori che spesso e volentieri sono **ostici da identificare**.  
 
 **Nota attenzione alla dimensione delle variabili**.  
-Se non trattassimo gli ov allora la variabile ```ta``` sarà (intuitivamente) di 16 bit (8 bit di CCPRxL + 8 bit CCPRxH). L'aggiunta della conta degli ovf però corrisponde ad una variabile di 8 bit shiftata di 16 -> **sono necessari 24 bit totali**  
+Se non trattassimo gli ov allora la variabile ```ta``` sarà (intuitivamente) di 16 bit (8 bit di CCPRxL + 8 bit CCPRxH). L'aggiunta della conta degli ovf però corrisponde ad una variabile di 8 bit con uno shift di 16 -> **sono necessari 24 bit totali**  
 A seconda del compilatore, ```ta``` dovrà essere dichiarata come uint oppure ```unsigned long int``` (spesso 32 bit).
 
 ## Lezione 6 - ADC
@@ -951,7 +951,7 @@ In particolare se voglio lavorare con il sonar uso `RC3(AN15)` che corrisponde a
 
 Se usiamo l'**ADC** ad 8 bit non è importante giustificare a destra o sinistra, basta ricordare il registro corretto (HIGH/LOW, 8 bit ciascuno) che contiene il dato.  
 
-**Se invece lo voglio a 10 bit**, 2 bit saranno o nell'High o nel registro Low e viceversa, a seconda di come viene giustificato.  
+**Se invece lo voglio a 10 bit**, 2 bit saranno o nel registro High o nel registro Low e viceversa, a seconda di come viene giustificato.  
 
 **I bit da 5 a 3 di ADCON2** permettono di impostare **il tempo d'acquisizione** (tempo di delay dopo che il condensatore del S&H viene bloccato, scandito in numero di Tad). Nel caso venga settato a 0 appena viene settato il bit GO dell'**ADC** parte immediatamente la conversione, la cui lunghezza verrà data da Tad.  
 
@@ -1010,13 +1010,13 @@ Facciamo un esempio settando **PRx=5 CCPRxL=2**:
 supponiamo **TMRx=0** e l'uscita è HIGH. Il timer conta e arriva a 5 (valore di PR).
 
 1. **Il comparatore sotto scatta**
-2. **latcha l'uscita alta** quando raggiunge 5
+2. **porta l'uscita ad alto** quando raggiunge 5
 3. copia **CCPRxL** in **CCPRxH**
 4. resetta **TMRx**.  
 
 Quindi, con l'uscita alta, TMRx riparte a contare. Ad un certo punto conta fino a 2 che è il valore di **CCPRxH**.
 
-1. **latcha l'uscita bassa** grazie al flip flop
+1. **porta l'uscita a basso** grazie al flip flop
 2. **TMRx continua a contare** fino a che non raggiunge 5
 3. **l'onda viene riportata alta** e quindi si ripete il ciclo appena descritto.
 
@@ -1082,15 +1082,15 @@ void main() {
      //----CCP MODULES SETUP----
      CCP4CON=  0B00001100;
      //              ++----impostare QUESTI DUE PER PWM MODE, TUTTI GLI ALTRI BIT A ZERO
-     CCP5CON=0x0F; //settato bit0/1 HIGH perchè non vengono usati
+     CCP5CON=0x0F; //settato bit0/1 HIGH perché non vengono usati
 
      //dobbiamo configurare quale timer abbiamo associato al nostro CCP. Setta timer2 in ccptmrs
      CCPTMRS1= 0b00000001;   //associo timer2 a CCP55,  associo timer4 a CCP4
 
      CCPR5L= 64; // un quarto di duty cycle
-     CCPR4L= 64; // un quarto di dyty cycle
+     CCPR4L= 64; // un quarto di duty cycle
 
-     TRISE.RE2=0;     //risetto i pin in uscita per attivare il pwm
+     TRISE.RE2=0;     // resetto i pin in uscita per attivare il pwm
      TRISD.RD1=0;
 
      while(1){ // fade in e out dei led
@@ -1113,7 +1113,7 @@ void main() {
 
 ![asmpic16](img/asmpic16.png)
 
-## Appunti sulle conversioni sonar modalità capture e sonar letto con l'adc
+## Appunti sulle conversioni sonar modalità capture e sonar letto con l'ADC
 
 ### SONAR in modalità CAPTURE
 
@@ -1125,7 +1125,7 @@ Il sonar in modalità capture viene visto sulla porta RC2 come input digitale.
 
 L'interrupt del capture è PIRX.CCPXIF.
 
-L'Enable si trova nel PIEx registro.
+L'enable si trova nel PIEx registro.
 
 Supponiamo di usare il CCP1CON, registro capture relativo al timer 1.
 
