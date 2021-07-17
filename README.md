@@ -10,10 +10,14 @@ Table of Contents
 
 =================
 
-* [pic-notes](#pic-notes)
+* [Pic notes](#pic-notes)
   * [Numeri binari](#numeri-binari)
     * [Endianness](#endianness)
     * [Complementi](#complementi)
+  * [Architettura](#architettura)
+    * [Architettura di Von Neumann](#architettura-di-von-neumann)
+    * [Architettura di Harvard](#architettura-di-harvard)
+    * [Differenze tra le due](#differenze-tra-le-due)
   * [ASSEMBLY](#assembly)
     * [Operazioni eseguibili dal PIC16](#operazioni-eseguibili-dal-pic16)
     * [Memoria e la suddivisione in banchi](#memoria-e-la-suddivisione-in-banchi)
@@ -27,9 +31,9 @@ Table of Contents
     * [Scrivere programmi in pseudo codice](#scrivere-programmi-in-pseudo-codice)
     * [Cosa deve essere salvato durante una IRQ (Interrupt request routine)](#cosa-deve-essere-salvato-durante-una-irq-interrupt-request-routine)
     * [Stringa di configurazione della CPU](#stringa-di-configurazione-della-cpu)
-    * [Codice di esempio con loop infinito](#codice-di-esempio-con-loop-infinito)
+    * [Loop infinito](#loop-infinito)
     * [Indirizzamento diretto e indiretto (come utilizzare FSR e INDF)](#indirizzamento-diretto-e-indiretto-come-utilizzare-fsr-e-indf)
-    * [Codice d'esempio sull'utilizzo di un FOR con FSR/INDF](#codice-desempio-sullutilizzo-di-un-for-con-fsrindf)
+      * [Codice d'esempio sull'utilizzo di cicli con FSR/INDF](#codice-desempio-sullutilizzo-di-cicli-con-fsrindf)
     * [Velocità di esecuzione delle istruzioni](#velocità-di-esecuzione-delle-istruzioni)
   * [Esercitazione 1](#esercitazione-1)
     * [Perché vengono usati dei condensatori?](#perché-vengono-usati-dei-condensatori)
@@ -56,6 +60,7 @@ Table of Contents
     * [TIMER0](#timer0)
     * [TIMER1 modalità 16Bit vs 2x8](#timer1-modalità-16bit-vs-2x8)
       * [Modalità 2x8](#modalità-2x8)
+        * [Quando allora questa modalità è comoda da usare?](#quando-allora-questa-modalità-è-comoda-da-usare)
       * [Modalità 1x16](#modalità-1x16)
   * [Lezione 4](#lezione-4)
     * [LCD](#lcd)
@@ -64,7 +69,7 @@ Table of Contents
   * [Lezione 6 - ADC](#lezione-6---adc)
   * [Lezione 7 - PWM](#lezione-7---pwm)
   * [PIC 16](#pic-16)
-  * [Appunti sulle conversioni sonar modalità capture e sonar letto con l'adc](#appunti-sulle-conversioni-sonar-modalità-capture-e-sonar-letto-con-ladc)
+  * [Appunti sulle conversioni sonar modalità capture e sonar letto con l'ADC](#appunti-sulle-conversioni-sonar-modalità-capture-e-sonar-letto-con-ladc)
     * [SONAR in modalità CAPTURE](#sonar-in-modalità-capture)
     * [SONAR letto con ADC](#sonar-letto-con-adc)
 
@@ -664,7 +669,7 @@ Se si desiderasse una frequenza di interrupt diversa da una potenza di 2, all'in
 
 Il periodo dell'interrupt si ottiene semplicemente invertendo la formula:  
 
-```Tmax = ( 4 * 256 * ( 256 - TMR0L ) ) / Fosc```
+```Tmax = ( 4 *256* ( 256 - TMR0L ) ) / Fosc```
 
 Valore tipico `4/32MHz = 1/8MHz = 125ns`. Il valore massimo del periodo di interrupt è 8.192 ms *(all'esame, 8ms è una approssimazione più che sufficiente)*. Se si volesse avere più precisione ci sono 2 opzioni:
 
