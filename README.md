@@ -1,4 +1,4 @@
-﻿# Microcontrollori-notes
+﻿# Pic notes
 
 Appunti del corso di microcontrollori, Politecnico di Milano, 2020-2021.
 
@@ -77,12 +77,37 @@ La *Endianness* (ordine dei byte in Italiano) indica in che modo vengono salvati
 * **Big endian**: i bit più significativi (MSB) sono scritti **per primi**
 * **Small endian**: i bit meno significativi (LSB) sono scritti **per primi**
 
+La maggior parte dei processori, tra cui i PIC usati in questo corso, usano una architettura di tipo **big endian**.
+
 ### Complementi
 
 Sono il metodo più diffuso per rappresentare numeri con segno in informatica. Il segno della somma di due numeri complementati verrà determinato in modo automatico, senza dover prendere particolari accorgimenti.
 
 * **Complemento ad uno**: si invertono i bit della parola. **Problema:** ci sono due rappresentazioni per il numero 0 (+0 e -0)
 * **Complemento a due**: si invertono i bit della parola e poi si somma 1. **La rappresentazione di 0** è univoca.
+
+## Architettura
+
+### Architettura di Von Neumann
+
+Nell'architettura di Von Neumann, il programma e le istruzioni sono salvate nella stessa memoria. Essa verrà condivisa tra le due entità.
+
+È stata inventata da *John Von Neumann* nel 1945.
+
+### Architettura di Harvard
+
+A differenza della struttura appena vista, la memoria e le istruzioni sono salvate in parti diverse della memoria. Esistono dei collegamenti (*bus*) che dovranno collegare le varie periferiche che afferiscono a queste due entità.
+
+### Differenze tra le due
+
+| Von Neumann                                                                                                                                                 | Harvard                                                                                                              |
+|-------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| La stessa memoria è usata per dati e istruzioni                                                                                                             | Dati e istruzioni sono salvate in memorie diverse                                                                    |
+| Viene usato solo un bus per trasferire sia dati che istruzioni                                                                                              | Vengono usati bus dedicati per i dati e per le istruzioni                                                            |
+| Servono due colpi di clock per eseguire ogni istruzione, perché la CPU non può accedere contemporaneamente alle due sezioni di memoria (istruzioni e dati)  | Ogni istruzione richiede un singolo colpo di clock perché la CPU può accedere a istruzioni e dati contemporaneamente |
+| Più usata in personal computer                                                                                                                              | Più usata in microcontrollori                                                                                        |
+
+![confronto tra architetture](img/neumann-harvard-architecture.png)
 
 ## ASSEMBLY  
 
@@ -737,7 +762,7 @@ Riassumendo, mi ritrovo che se butto giù subito la flag ma non aggiorno la PORT
   // ******ISR SCORRETTO******
   void interrupt(){
     if (INTCON.RBIF) // flag alzata da PORTB
-      INTCON.RBIF = 0; // teset della flag
+      INTCON.RBIF = 0; // reset della flag
     // a questo punto accade il mismatch
     // non ho aggiornato PORTB prima di abbassare la flag
     if (PORTB.RB6) 
@@ -1148,23 +1173,23 @@ L'enable si trova nel PIEx registro.
 
 Supponiamo di usare il CCP1CON, registro capture relativo al timer 1.
 
-**Come mai il risultato della conversione va diviso per 8?** ```(width = width >> 3)```
+**Come mai il risultato della conversione va diviso per 8?** `width = width >> 3`
 
-La nostra frequenza è 32MHz. Noi lavoriamo alla f del capture che è ```( fosc/4 )= 8 MHz```.
+La nostra frequenza è 32MHz. Noi lavoriamo alla f del capture che è `fosc / 4 =  8 MHz`.
 
-La pendenza in modalità capture è ```1mm = 1us``` (vedi datasheet sonar).
+La pendenza in modalità capture è `1mm = 1us` (vedi datasheet sonar).
 
-Il passo del ccp nel tempo sarà ```1/f = 1/8 MHz = 125 ns```
+Il passo del ccp nel tempo sarà `1/f = 1/8 MHz = 125 ns`
 
-In particolare, se ogni passo del sonar è 1u e un passo del ccp è 125 ns, allora la conversione è ```c = (t/125ns) =8 passi```
+In particolare, se ogni passo del sonar è 1u e un passo del ccp è 125 ns, allora la conversione è `c = t / 125ns =8 passi`
 
 Ovvero, per **ottenere un microsecondo sono necessari otto passi del ccp.**
 
-Quindi se ```1us : 125 ns = 8 LSB```
+Quindi se `1us : 125 ns = 8 LSB`
 
-* 300us ovvero ```300 mm : 125 ns= 2400``` passi del ccp
+* 300us ovvero `300 mm : 125 ns = 2400` passi del ccp
 
-* 5000 us ovvero ```5000 mm:125 ns= 40000``` passi del ccp.
+* 5000 us ovvero `5000 mm : 125 ns = 40000` passi del ccp.
 
 ### SONAR letto con ADC
 
@@ -1178,9 +1203,9 @@ L'enable si trova nel PIE1.ADIE
 
 ![microcontrollori](img/microcontrollori.jpg)
 
-**Come mai il risultato della conversione va moltiplicato per 5?** ```(width = width * 5)```
+**Come mai il risultato della conversione va moltiplicato per 5?** `width = width * 5`
 
-La equazione di questa retta sarebbe ```V = 5V/5000mm * d```
+La equazione di questa retta sarebbe `V = 5V/5000mm * d`
 
 Dove V è la tensione e d la distanza.
 
@@ -1192,23 +1217,24 @@ Ogni passo dell'ADC sarebbe circa 5mV. Più precisamente 4.88 mV. * (per vedere 
 
 Cerchiamo ora di scoprire a che livello si trova la minima distanza riconosciuta dal sonar, facciamo una proporzione:
 
-```5V:1024=0.3:X``` ovvero X=61. I livelli riconosciuti dall'ADC vanno quindi da 61 a 1024.
+`5V : 1024 = 0.3 : X` ovvero `X = 61`. I livelli riconosciuti dall'ADC vanno quindi da 61 a 1024.
 
 Quindi la conversione da V a livelli segue questa equazione:
 
-``` V = a * LSB ``` dove LSB è 5mV ( o più precisamente 4.88mV)
+` V = a * LSB ` dove LSB è 5mV ( o più precisamente 4.88mV)
 
 Se quindi dobbiamo passare allo spazio tramite i livelli (che sono il risultato nel registro dell'ADC) allora:
 
-``` d = (1mm/1mV) * V ```
+` d = (1mm/1mV) * V `
 
 Ma V è uguale ad (a * LSB)
 
-```d = (1mm/1mV) *a* LSB = 1mm*a* 4.88 = 4.88 mm * a```
+`d = (1mm/1mV) * a * LSB = 1mm * a * 4.88 = 4.88 mm * a`
 
-``` d = 4.88mm * a ```
+` d = 4.88mm * a `
 
-```d = (5000/1024) *a* mm```
+`d = (5000/1024) * a * mm`
+
 (posso scegliere l'unità di misura, da mm a metri ma sarebbe meno preciso)
 
 **se vogliamo tenere 4.88 a precisione massima dobbiamo tenere conto che lavoriamo su registri 16 bit.**
@@ -1225,20 +1251,20 @@ Abbiamo quindi massimo 5 bit liberi su cui lavorare (uno ce lo teniamo libero pe
 Le operazioni da fare saranno, sapendo che
 d= (5000/1024)*a
 
-E sapendo che ```5000=2^3 *5^4``` e ```1024=2^10```, a occupa sempre 10 bit allora: d= ((5^4)/(2^7) )*a
+E sapendo che `5000=2^3 *5^4` e `1024=2^10`, a occupa sempre 10 bit allora: d= ((5^4)/(2^7) )*a
 
 Dovrò moltiplicare per quattro volte 5 e dividere per 2 sette volte. Se lo faccio nella giusta sequenza mantengo precisione:
 
-```a*5 13 bit```
+`a*5 13 bit`
 
-```a*5>>1 12 bit``` (quindi c'è spazio per un'altra moltiplicazione per 5 e arrivo a 15 bit che è il limite dello spazio di lavoro)
+`a*5>>1 12 bit` (quindi c'è spazio per un'altra moltiplicazione per 5 e arrivo a 15 bit che è il limite dello spazio di lavoro)
 
-```(a*5>>1)*5 15 bit```
+`(a*5>>1)*5 15 bit`
 
-```((a*5>>1)*5)>>3 12 bit```
+`((a*5>>1)*5)>>3 12 bit`
 
-```(((a*5>>1)*5)>>3)*5 15 bit```
+`(((a*5>>1)*5)>>3)*5 15 bit`
 
-```(((((a*5>>1)*5)>>3)*5)>>3) 12 bit```
+`(((((a*5>>1)*5)>>3)*5)>>3) 12 bit`
 
-```((((((a*5>>1)*5)>>3)*5)>>3)*5) 15 bit```
+`((((((a*5>>1)*5)>>3)*5)>>3)*5) 15 bit`
