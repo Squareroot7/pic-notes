@@ -64,6 +64,8 @@ Table of Contents
       * [Modalità 1x16](#modalità-1x16)
   * [Lezione 4](#lezione-4)
     * [LCD](#lcd)
+      * [Istruzioni per manipolare le stringhe](#istruzioni-per-manipolare-le-stringhe)
+    * [Mismatch nel caso di IOCB](#mismatch-nel-caso-di-iocb)
   * [Lezione 4 - CCP (Sonar)](#lezione-4---ccp-sonar)
     * [Cosa succede se TIMER1 va in overflow più volte durante una misura di CCP?](#cosa-succede-se-timer1-va-in-overflow-più-volte-durante-una-misura-di-ccp)
   * [Lezione 6 - ADC](#lezione-6---adc)
@@ -89,7 +91,17 @@ La maggior parte dei processori, tra cui i PIC usati in questo corso, usano una 
 Sono il metodo più diffuso per rappresentare numeri con segno in informatica. Il segno della somma di due numeri complementati verrà determinato in modo automatico, senza dover prendere particolari accorgimenti.
 
 * **Complemento ad uno**: si invertono i bit della parola. **Problema:** ci sono due rappresentazioni per il numero 0 (+0 e -0)
-* **Complemento a due**: si invertono i bit della parola e poi si somma 1. **La rappresentazione di 0** è univoca.
+* **Complemento a due**: si invertono i bit della parola e poi si somma 1, ignorando il bit di *carry*. **La rappresentazione di 0** è univoca.
+
+Con `N` bit è possibile rappresentare tutti i numeri da `-(2 ^ (N - 1))` a `2 ^ (N - 1) - 1`.
+
+Per ottenere l'opposto di un numero in complemento a due, è sufficiente invertire tutti i bit ed aggiungere 1.
+
+Per ottenere rapidamente il complemento a due di un numero, si procede come segue:
+
+1. Partendo da destra (dal LSB), si ricopiano tutti gli `0`
+1. Si procede copiando il primo `1`
+1. Da qua in poi, si invertono tutti i bit fino ad arrivare al MSB
 
 ## Architettura
 
@@ -797,9 +809,18 @@ In generale, bisogna inizializzare l'array a `lunghezza stringa + 1`, proprio pe
 * 1 per il segno (+ o -)
 * 1 per il carattere terminatore `\0`
 
+#### Istruzioni per manipolare le stringhe
+
+* `strcpy(dest, source)` copia una stringa in un altra.
+  * `source` può essere anche una costante. Ad esempio: `strcpy(txt, "testo")` copierà "testo" nell'array di char `txt`
+* `IntToStr(int, dest)` trasforma un intero in una stringa.
+* `strcat(str1, str2)` concatena `str1` e `str2` e salva il risultato in `str1`
+
+### Mismatch nel caso di IOCB
+
 ![RBIF](img/RBIF.jpg)
 
-Si osservi, infine, come sia possibile entrare due volte nella stessa `ISR`, nel caso di un *IOCB*, (*interrupt on change on port B*). Si analizzi la seguente situazione:
+Si osservi, come sia possibile entrare due volte nella stessa `ISR`, nel caso di un *IOCB*, (*interrupt on change on port B*). Si analizzi la seguente situazione:
 
 1. Un bottone viene premuto, quindi portando ad `1` il valore letto su `PORTB`
 1. La porta `XOR` darà in output il valore `1`, scatenando l'interrupt e impostando il bit `RBIF`
