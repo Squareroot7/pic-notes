@@ -673,7 +673,7 @@ La frequenza di interrupt è frequenza d'ingresso ( quindi `Fosc/4`) diviso il p
 
 La frequenza di *clock* della scheda è `Fosc=32MHz`. La frequenza di interrupt minima (che corrisponde quindi al massimo periodo tra due interrupt consecutivi), è:  
 
-```Fmin = Fosc / ( 4  *256* ( 256 - TMR0L ))```
+```Fmin = Fosc / ( 4 * 256 * ( 256 - TMR0L ))```
 
 Bisogna tenere conto del valore di `TMR0L` (il valore iniziale contenuto nel registro). Impostando `TMR0L=0`, si ha la certezza che il timer parta sempre da zero.
 
@@ -681,7 +681,7 @@ Se si desiderasse una frequenza di interrupt diversa da una potenza di 2, all'in
 
 Il periodo dell'interrupt si ottiene semplicemente invertendo la formula:  
 
-```Tmax = ( 4 *256* ( 256 - TMR0L ) ) / Fosc```
+```Tmax = ( 4 * 256 * ( 256 - TMR0L ) ) / Fosc```
 
 Valore tipico `4/32MHz = 1/8MHz = 125ns`. Il valore massimo del periodo di interrupt è 8.192 ms *(all'esame, 8ms è una approssimazione più che sufficiente)*. Se si volesse avere più precisione ci sono 2 opzioni:
 
@@ -710,16 +710,16 @@ Questa modalità però presenta dei problemi sostanziali, che potrebbero portare
 
 Si consideri questa situazione:
 
-1. Con `TMR1` acceso, `TMR1H=0x00`, `TMR1L=0xFF`
+1. Con `TMR1` acceso, `TMR1H = 0x00`, `TMR1L = 0xFF`
 1. Si procede con la lettura di `TMR1L` e salva il dato in una variabile.  Il risultato sarà pari a `0x00FF` (a 16 bit)
-1. A questo si legge il valore di `TMR1H`, ma il timer non è stato spento ed è andato avanti nel conteggio. Quindi `TMR1L=0x00`, `TMR1H=0x01`
+1. A questo si legge il valore di `TMR1H`, ma il timer non è stato spento ed è andato avanti nel conteggio. Quindi `TMR1L = 0x00`, `TMR1H = 0x01`
 1. Infine, leggendo il byte successivo e il risultato sarà pari a `0x00FF + 0x0100 = 0x01FF`, *valore diverso da quello atteso*, `0x00FF`
 
 Lo stesso problema si verifica nel caso opposto:
 
-1. Si supponga, sempre con `TMR1` acceso, che `TMR1=0x00FF`
-1. Il valore in `TMR1H` sarà `TMR1H=0x0000`
-1. Il timer continuerà a contare, e quindi `TMR1=0x0100`
+1. Si supponga, sempre con `TMR1` acceso, che `TMR1 = 0x00FF`
+1. Il valore in `TMR1H` sarà `TMR1H = 0x0000`
+1. Il timer continuerà a contare, e quindi `TMR1 = 0x0100`
 1. In `TMR1L` ci sarà un valore `0x0000`, diverso da quello aspettato (`0x00FF`).
 
 Sostanzialmente si verifica sempre una discrepanza tra il valore atteso all'interno del timer e la somma dei valori letti nei due registri a cause del tempo necessario a raccogliere i valori contenuti in questi ultimi.
@@ -835,7 +835,7 @@ Per ovviare a questa problematica, bisognerà leggere il valore della porta prim
 
 ``` C
   // ******ISR SCORRETTO******
-  void interrupt(){
+  void interrupt() {
     if (INTCON.RBIF) // flag alzata da PORTB
       INTCON.RBIF = 0; // reset della flag
     // a questo punto accade il mismatch
@@ -847,11 +847,13 @@ Per ovviare a questa problematica, bisognerà leggere il valore della porta prim
   }
 
   // ******ISR CORRETTO******
-  void interrupt(){
+  void interrupt() {
     if(INTCON.RBIF){ // flag alzata da PORTB
-    if(PORTB.RB6)} i++; // leggo PORTB -> Flip Flop aggiornato!
-    if(PORTB.RB) i--; // altro refresh di PORTB
-    INTCON.RBIF=0; //Reset della flag
+      if(PORTB.RB6)
+        i++; // leggo PORTB -> Flip Flop aggiornato!
+      if(PORTB.RB) 
+        i--; // altro refresh di PORTB
+    INTCON.RBIF = 0; //Reset della flag
     // a questo punto ho PORTB aggiornato -> NO mismatch
     // non entro nella ISR una seconda volta  
   }
@@ -1007,11 +1009,11 @@ Tutto ciò, da come possiamo immaginare, **non tiene assolutamente conto degli o
 ``` C
 void interrupt(){
   if (PIR1.TMR1IF) {
-    //inserire condizione che abilita ovf_number++ quando ho intercettato il rising edge
+    // inserire condizione che abilita ovf_number++ quando ho intercettato il rising edge
     ovf_number++;
   }
   ...
-  //inserire interrupt CCP
+  // inserire interrupt CCP
 }
 ```
 
@@ -1028,9 +1030,9 @@ Da notare che la variabile ```ovf_number``` al primo aggiornamento (quello di ``
 Quando si eseguono operazioni di shift e somma che potrebbero essere fatte in più righe di codice come:
 
 ``` C
-   ta=CCPRxH<<8; //ta è a 24 bit;
-   ta+=CCPRxL;
-   ta+=ovf_number<<16;
+   ta = CCPRxH << 8; //ta è a 24 bit;
+   ta += CCPRxL;
+   ta += ovf_number << 16;
 ```
 
 è buona regola essere abbondanti di parentesi per **essere** sicuri che il compilatore stia effettivamente facendo le operazioni desiderate e che non stia mescolando operazioni portando a errori che spesso e volentieri sono **ostici da identificare**.  
@@ -1047,18 +1049,18 @@ L'ADC ha due modalità di funzionamento: a 8 oppure 10 bit
 I suoi registri da impostare sono `ADCON0`, `ADCON1`, `ADCON2`.  
 
 * `ADCON0` serve a determinare attraverso i bit da 6 a 2 il pin scelto del microcontrollore per la conversione.  Inoltre il bit `ADCON0.ADC_GO_NOT_DONE` fa partire la conversione se alto. Quando la conversione è completata torna a zero. Il bit `ADCON0.ADON` abilita l'ADC e deve essere impostato a 1.
-* `ADCON1` è invece il registro in cui vengono specificate le tensioni di alimentazioni. Durante lo svolgimento del corso, esso sarà alimentato 0/+5V e quindi semplicemente `ADCON1=0`.
+* `ADCON1` è invece il registro in cui vengono specificate le tensioni di alimentazioni. Durante lo svolgimento del corso, esso sarà alimentato 0/+5V e quindi semplicemente `ADCON1 = 0`.
 * `ADCON2` invece contiene il bit 7 (`ADFM`) che è legato alla giustificazione (dove vengono salvati i bit più significativi e dove i meno significativi). L'ADC sfrutta due registri (`ADRESH` e `ADRESL`) in cui verranno salvati i 10 bit risultanti dalla conversione. Esso contiene anche la selezione del numero di `Tad` (vedi sotto) e la frequenza che comanda l'`ADC`.
 
 Usando l'*ADC* con risoluzione ad 8bit, non è importante dove sia posta la giustificazione, basta infatti ricordare di accedere al registro corretto per leggere il valore convertito. Esso sarà:
 
-* `ADRESH` se `ADFM=0`
-* `ADRESL` se `ADFM=1`
+* `ADRESH` se `ADFM = 0`
+* `ADRESL` se `ADFM = 1`
 
 Lavorando invece con risoluzione pari a 10 bit, bisognerà considerare i due registri. Infatti, il valore finale sarà:
 
-* `ADRESH << 2 + ADRESL >> 6` se `ADFM=0`
-* `ADRESH << 6 + ADRESL` se `ADFM=1`
+* `ADRESH << 2 + ADRESL >> 6` se `ADFM = 0`
+* `ADRESH << 6 + ADRESL` se `ADFM = 1`
 
 ![adif](img/adif.png)
 
@@ -1073,7 +1075,7 @@ Selezionare il prescaler per il modulo *ADC* è fondamentale per avere una tempo
 
 `Tacqt` è il tempo in cui il *S&H* è ancora agganciato al pin del PIC e quindi il condensatore è ancora libero di caricarsi prima che intervenga `Tad` per iniziare l'acquisizione del valore.
 
-Impostare sempre bene i registri relativi alla porta, `ANSELx=1` (per abilitare l'*ADC* sulla porta) e `TRISx=1` (per impostare la porta come input).
+Impostare sempre bene i registri relativi alla porta, `ANSELx = 1` (per abilitare l'*ADC* sulla porta) e `TRISx = 1` (per impostare la porta come input).
 
 `AIDF`, il flag relativo all'interrupt scatenato dall'*ADC*, verrà settato alla fine di ogni conversione a prescindere dall'interrupt.
 
@@ -1111,7 +1113,7 @@ Un problema costruttivo di questa scheda è legato al fatto che il PIC lavora ad
 
 La frequenza massima di lavoro è `Fosc / 4`, quindi per coordinare i due bit del timer c'è un contatore dedicato che lavora ad una frequenza pari a quella di clock (`Fosc`). Per motivi legati al coordinamento tra gli MSB e gli LSB del timer, il prescaler è impostabile unicamente a 1, 4 o 16.
 
-Esempio: impostando `PRx=5`. `CCPRxL=2`, si supponga `TMRx=0` e l'uscita è *bassa*. Il timer conta e arriva a 5 (valore di PR). Allora, in questo momento:
+Esempio: impostando `PRx=5`. `CCPRxL=2`, si supponga `TMRx = 0` e l'uscita è *bassa*. Il timer conta e arriva a 5 (valore di PR). Allora, in questo momento:
 
 1. Il comparatore *LOW* commuta
 1. L'uscita viene portata ad *alto*
@@ -1127,7 +1129,7 @@ Quindi, con l'uscita alta, `TMRx` riparte a contare, fino ad arrivare a 2 (valor
 
 Agendo sul prescaler, è possibile influenzare la frequenza dell'onda quadra. Infatti aumentando `PRx` (quindi il valore del prescaler), la frequenza di commutazione diminuisce.
 
-La risoluzione del *CCP* viene impostata dal registro `PRx` (*nota* con `PR=5` si avranno solo 5 passi modificabili).
+La risoluzione del *CCP* viene impostata dal registro `PRx` (*nota* con `PR = 5` si avranno solo 5 passi modificabili).
 
 La risoluzione massima con prescaler a 1 è pari a `fosc/4`. Di conseguenza ogni passo è 125ns con una frequenza di oscillazione di 32Mhz. Se il prescaler fosse impostato a 16, allora il periodo del *PWM* sarebbe `125ns * 16 = 2us` e il corrispondente duty cycle sarà pari a `CCPRxL/PRx`.
 
@@ -1138,8 +1140,8 @@ unsigned short int pwm_cnt = 0;
 unsigned int time_cnt1 = 0, time_set1 = 100;
 void main()
 {
-  unsigned short int pwm_period = 255, // set del periodo del pwm
-      hi_period = 5;                   // set della parte HI del pwm (  1  <  hi_period  <  pwm_period  )
+  unsigned short int pwm_period = 255; // set del periodo del pwm
+  hi_period = 5;                       // set della parte HI del pwm (  1  <  hi_period  <  pwm_period  )
   TRISD = 0;                           // imposto la porta D come output
   LATD = 0;                            // porto tutto a zero
   T0CON = 0b11000000;                  // attiva timer, attivalo a 8 bit e attivalo a 256 prescaler
