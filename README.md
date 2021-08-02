@@ -70,8 +70,8 @@ Table of Contents
   * [Argomenti non visti nell'A.A. 2020/2021](#argomenti-non-visti-nellaa-20202021)
     * [Lezione 4 - CCP (Sonar)](#lezione-4---ccp-sonar)
       * [Cosa succede se TIMER1 va in overflow più volte durante una misura di CCP?](#cosa-succede-se-timer1-va-in-overflow-più-volte-durante-una-misura-di-ccp)
-  * [Appunti sulle conversioni sonar modalità capture e sonar letto con l'ADC](#appunti-sulle-conversioni-sonar-modalità-capture-e-sonar-letto-con-ladc)
-    * [SONAR in modalità CAPTURE](#sonar-in-modalità-capture)
+    * [Appunti sulle conversioni sonar modalità capture e sonar letto con l'ADC](#appunti-sulle-conversioni-sonar-modalità-capture-e-sonar-letto-con-ladc)
+      * [SONAR in modalità CAPTURE](#sonar-in-modalità-capture)
       * [SONAR letto con ADC](#sonar-letto-con-adc)
 
 ## Numeri binari
@@ -1227,9 +1227,9 @@ Quando si eseguono operazioni di shift e somma che potrebbero essere fatte in pi
 Se non trattassimo gli ov allora la variabile ```ta``` sarà (intuitivamente) di 16 bit (8 bit di CCPRxL + 8 bit CCPRxH). L'aggiunta della conta degli ovf però corrisponde ad una variabile di 8 bit con uno shift di 16 -> **sono necessari 24 bit totali**  
 A seconda del compilatore, ```ta``` dovrà essere dichiarata come uint oppure ```unsigned long int``` (spesso 32 bit).
 
-## Appunti sulle conversioni sonar modalità capture e sonar letto con l'ADC
+### Appunti sulle conversioni sonar modalità capture e sonar letto con l'ADC
 
-### SONAR in modalità CAPTURE
+#### SONAR in modalità CAPTURE
 
 ![microcontrolloricapturesonar](img/microcontrolloricapturesonar.jpg)
 
