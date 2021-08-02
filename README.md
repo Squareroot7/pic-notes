@@ -67,14 +67,12 @@ Table of Contents
       * [Istruzioni per manipolare le stringhe](#istruzioni-per-manipolare-le-stringhe)
   * [Lezione 6 - ADC](#lezione-6---adc)
   * [Lezione 7 - PWM](#lezione-7---pwm)
-    * [Materiale non visto nell'A.A. 2020/2021](#materiale-non-visto-nellaa-20202021)
-  * [Lezione 4 - CCP (Sonar)](#lezione-4---ccp-sonar)
-    * [Cosa succede se TIMER1 va in overflow più volte durante una misura di CCP?](#cosa-succede-se-timer1-va-in-overflow-più-volte-durante-una-misura-di-ccp)
+  * [Argomenti non visti nell'A.A. 2020/2021](#argomenti-non-visti-nellaa-20202021)
+    * [Lezione 4 - CCP (Sonar)](#lezione-4---ccp-sonar)
+      * [Cosa succede se TIMER1 va in overflow più volte durante una misura di CCP?](#cosa-succede-se-timer1-va-in-overflow-più-volte-durante-una-misura-di-ccp)
   * [Appunti sulle conversioni sonar modalità capture e sonar letto con l'ADC](#appunti-sulle-conversioni-sonar-modalità-capture-e-sonar-letto-con-ladc)
     * [SONAR in modalità CAPTURE](#sonar-in-modalità-capture)
-    * [SONAR letto con ADC](#sonar-letto-con-adc)
-
-Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
+      * [SONAR letto con ADC](#sonar-letto-con-adc)
 
 ## Numeri binari
 
@@ -1045,9 +1043,9 @@ void main()
 }
 ```
 
-### Materiale non visto nell'A.A. 2020/2021
+## Argomenti non visti nell'A.A. 2020/2021
 
-## Lezione 4 - CCP (Sonar)
+### Lezione 4 - CCP (Sonar)
 
 ![capture](img/capture.jpg)
 
@@ -1180,7 +1178,7 @@ void interrupt(){
 }
 ```
 
-### Cosa succede se TIMER1 va in overflow più volte durante una misura di CCP?
+#### Cosa succede se TIMER1 va in overflow più volte durante una misura di CCP?
 
 Di certo questo non è il caso del Sonar dato che il **tempo di overflow del TIMER1 è molto maggiore di quello del gradino in uscita dal sonar**.  
 Il caso di un overflow singolo è già stato trattato e, da come sappiamo, viene **"risolto" completamente dall'ALU**.  
@@ -1263,7 +1261,7 @@ Quindi se `1us : 125 ns = 8 LSB`
 
 * 5000 us ovvero `5000 mm : 125 ns = 40000` passi del ccp.
 
-### SONAR letto con ADC
+#### SONAR letto con ADC
 
 Premesse legate al datasheet del sonar e al datasheet del PIC
 
